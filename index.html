@@ -2,299 +2,587 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Asfour Games | لوحة الإدارة</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>لوحة تحكم عصفور</title>
     <style>
-        :root { --primary: #3b82f6; --bg-dark: #111827; --card-bg: #1f2937; --text-main: #f9fafb; --text-muted: #9ca3af; --danger: #ef4444; --success: #10b981; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
-        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
-        
-        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); display: flex; justify-content: center; align-items: center; z-index: 9999; flex-direction: column; }
-        .login-box { background: var(--card-bg); padding: 30px; border-radius: 15px; text-align: center; border: 1px solid #374151; width: 90%; max-width: 400px; }
-        .btn-google { background: white; color: black; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; margin-top: 20px; }
-        
-        .sidebar { width: 100%; background: var(--card-bg); padding: 15px; display: flex; gap: 10px; border-bottom: 1px solid #374151; overflow-x: auto; white-space: nowrap; align-items: center; }
-        .logo { font-size: 20px; font-weight: 900; color: var(--primary); margin-left: 15px; }
-        .nav-btn { background: #374151; color: var(--text-main); border: none; padding: 10px 20px; font-size: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; }
-        .nav-btn.active { background: var(--primary); color: #fff; }
-        
-        @media (min-width: 768px) {
-            body { flex-direction: row; }
-            .sidebar { width: 250px; flex-direction: column; border-bottom: none; border-left: 1px solid #374151; overflow-x: visible; }
-            .logo { font-size: 24px; text-align: center; margin-bottom: 20px; margin-left: 0; }
-            .nav-btn { text-align: right; padding: 15px; }
-        }
+        :root { --bg: #f3f4f6; --card: #fff; --text: #1f2937; --muted: #6b7280; --primary: #3b82f6; --danger: #ef4444; --ok: #10b981; --warn: #f59e0b; --line: #e5e7eb; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); }
+        button { cursor: pointer; font-weight: 600; }
+        input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; background: #fff; outline: none; }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+        input[type=checkbox] { width: auto; }
+        label { font-size: 13px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; }
 
-        .main-content { flex: 1; padding: 15px; overflow-y: auto; width: 100%; display: none; }
-        @media (min-width: 768px) { .main-content { padding: 30px; } }
-        
-        .section-title { font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #fff; border-bottom: 2px solid #374151; padding-bottom: 10px; }
-        .admin-card { background: var(--card-bg); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #374151; }
-        .form-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px; }
-        @media (min-width: 768px) { .form-grid { grid-template-columns: 1fr 1fr; } }
-        
-        .form-group { display: flex; flex-direction: column; gap: 5px; }
-        .form-group.full-width { grid-column: 1 / -1; }
-        label { font-weight: bold; color: var(--text-muted); font-size: 13px; }
-        input, select { background: #374151; border: 1px solid #4b5563; color: white; padding: 12px; border-radius: 8px; outline: none; font-size: 14px; width: 100%; }
-        input[type="file"] { padding: 8px; background: #1f2937; }
-        input:focus, select:focus { border-color: var(--primary); }
-        
-        .radio-group { display: flex; gap: 15px; margin-top: 5px; }
-        .radio-group label { display: flex; align-items: center; gap: 5px; color: white; cursor: pointer; font-size: 14px;}
-        
-        .btn-submit { background: var(--success); color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s; width: 100%; }
-        .progress-bar-container { width: 100%; background: #374151; border-radius: 5px; margin-top: 10px; display: none; overflow: hidden;}
-        .progress-bar { width: 0%; height: 10px; background: var(--primary); transition: 0.2s; }
-        #statusMessage { font-size: 12px; color: var(--primary); margin-top: 5px; display: block; }
+        .btn { border: none; border-radius: 10px; padding: 9px 14px; font-size: 13px; background: var(--primary); color: #fff; }
+        .btn.gray { background: #e5e7eb; color: var(--text); }
+        .btn.red { background: var(--danger); }
+        .btn.green { background: var(--ok); }
+        .btn.orange { background: var(--warn); }
+        .btn.sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
 
-        .table-responsive { width: 100%; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 500px; }
-        th, td { padding: 12px; text-align: right; border-bottom: 1px solid #374151; font-size: 14px; }
-        th { background: #374151; color: var(--text-muted); }
-        .btn-delete { background: var(--danger); color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px;}
-        .game-img-preview { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; }
+        #login-view { min-height: 100vh; min-height: 100dvh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .login-box { background: var(--card); padding: 30px; border-radius: 20px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+        .login-box h2 { margin-bottom: 8px; }
+        .login-box p { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+        #loginMsg { color: var(--danger); font-size: 13px; margin-top: 12px; min-height: 18px; }
+
+        #app { display: none; }
+        .top { background: var(--card); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 1px 2px rgba(0,0,0,.06); position: sticky; top: 0; z-index: 50; }
+        .top b { font-size: 17px; }
+        .top .who { font-size: 12px; color: var(--muted); display: none; }
+        @media (min-width: 640px) { .top .who { display: inline; } }
+
+        .tabs { display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px 0; scrollbar-width: none; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab-btn { border: none; background: var(--card); padding: 9px 16px; border-radius: 20px; font-size: 14px; white-space: nowrap; color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+        .tab-btn.active { background: var(--primary); color: #fff; }
+
+        main { padding: 16px; max-width: 1100px; margin: 0 auto; }
+        .tab { display: none; }
+        .tab.active { display: block; }
+        .card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+        .card h3 { font-size: 16px; margin-bottom: 12px; }
+
+        .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+        @media (min-width: 700px) { .stats { grid-template-columns: repeat(4, 1fr); } }
+        .stat { background: var(--card); border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+        .stat b { display: block; font-size: 26px; color: var(--primary); }
+        .stat span { font-size: 12px; color: var(--muted); font-weight: 600; }
+        .two { display: grid; gap: 16px; }
+        @media (min-width: 800px) { .two { grid-template-columns: 1fr 1fr; } }
+
+        .form-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+        @media (min-width: 700px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+        .full { grid-column: 1 / -1; }
+        .checks { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+        .checks label { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--text); }
+        .preview { display: flex; gap: 12px; align-items: center; background: var(--bg); border-radius: 12px; padding: 10px; }
+        .preview img { width: 70px; height: 70px; border-radius: 12px; object-fit: cover; background: #d1d5db; }
+        .row-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 9px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+        th { color: var(--muted); font-size: 12px; }
+        tr.clickable { cursor: pointer; }
+        tr.clickable:hover { background: #f9fafb; }
+        td img.thumb { width: 38px; height: 38px; border-radius: 8px; object-fit: cover; vertical-align: middle; background: #d1d5db; }
+        .pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+        .pill.ok { background: #d1fae5; color: #065f46; }
+        .pill.off { background: #e5e7eb; color: #4b5563; }
+        .pill.bad { background: #fee2e2; color: #991b1b; }
+        .pill.gold { background: #fef3c7; color: #92400e; }
+        .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; font-weight: bold; vertical-align: middle; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+        .toolbar > * { flex: 1; min-width: 140px; }
+        .toolbar .btn { flex: 0 0 auto; }
+        .muted { color: var(--muted); }
+        .list-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 100; display: none; justify-content: center; align-items: flex-start; padding: 20px 12px; overflow-y: auto; }
+        .modal.open { display: flex; }
+        .box { background: var(--card); border-radius: 20px; padding: 20px; width: 100%; max-width: 640px; }
+        .box-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .detail-head { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
+        .detail-head .avatar { width: 64px; height: 64px; font-size: 26px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+        .info { background: var(--bg); border-radius: 12px; padding: 10px 12px; }
+        .info span { display: block; font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+        .info b { font-size: 14px; word-break: break-all; }
+        iframe.test { width: 100%; height: 55vh; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 18px; border-radius: 12px; font-size: 14px; z-index: 300; display: none; }
     </style>
 </head>
 <body>
 
-    <!-- شاشة الدخول (المفتاح السري) -->
-    <div id="login-screen">
-        <div class="login-box">
-            <h2 style="color:var(--primary);">إدارة عصفور جيمز</h2>
-            <p style="color:var(--text-muted); font-size:14px; margin-top:5px;">مسموح بالدخول للمدير فقط</p>
-            <button class="btn-google" id="loginBtn">تسجيل الدخول (Google)</button>
-        </div>
+<!-- شاشة الدخول -->
+<div id="login-view">
+    <div class="login-box">
+        <div style="font-size:42px;">🎮</div>
+        <h2>لوحة تحكم عصفور</h2>
+        <p>سجّل الدخول بحساب الأدمن</p>
+        <button class="btn" style="width:100%; padding:12px;" id="loginBtn">الدخول بـ Google</button>
+        <div id="loginMsg"></div>
+    </div>
+</div>
+
+<!-- اللوحة -->
+<div id="app">
+    <div class="top">
+        <b>🎮 لوحة تحكم عصفور</b>
+        <span class="who" id="adminEmail"></span>
+        <button class="btn gray sm" id="logoutBtn">خروج</button>
     </div>
 
-    <!-- الشريط الجانبي -->
-    <div class="sidebar" id="sidebar" style="display: none;">
-        <div class="logo">المدير</div>
-        <button class="nav-btn active" onclick="switchTab('games')">🎮 إدارة الألعاب</button>
-        <button class="nav-btn" onclick="switchTab('users')">👥 اللاعبين</button>
-        <button class="nav-btn" onclick="window.location.href='index.html'">العودة للموقع</button>
-        <button class="nav-btn" style="color:var(--danger); border:1px solid var(--danger);" id="logoutBtn">تسجيل الخروج</button>
+    <div class="tabs" id="tabs">
+        <button class="tab-btn active" data-tab="dash">📊 نظرة عامة</button>
+        <button class="tab-btn" data-tab="games">🎮 الألعاب</button>
+        <button class="tab-btn" data-tab="users">👥 اللاعبين</button>
+        <button class="tab-btn" data-tab="settings">⚙️ الإعدادات</button>
     </div>
 
-    <!-- المحتوى الرئيسي -->
-    <div class="main-content" id="main-content">
+    <main>
+        <!-- نظرة عامة -->
+        <section class="tab active" id="tab-dash">
+            <div class="stats" id="dashStats"></div>
+            <div class="two">
+                <div class="card"><h3>🔥 أكتر الألعاب لعباً</h3><div id="topGames"></div></div>
+                <div class="card"><h3>🏆 أعلى اللاعبين نقاطاً</h3><div id="topUsers"></div></div>
+            </div>
+        </section>
+
         <!-- الألعاب -->
-        <div id="games-section">
-            <div class="section-title">إضافة لعبة جديدة</div>
-            <div class="admin-card">
-                <form id="addGameForm">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>اسم اللعبة</label>
-                            <input type="text" id="gameTitle" required>
-                        </div>
-                        <div class="form-group">
-                            <label>تصنيف اللعبة</label>
-                            <select id="gameCategory" required>
-                                <option value="adventure">مغامرات</option>
-                                <option value="action">أكشن</option>
-                                <option value="cars">سيارات</option>
-                                <option value="puzzle">ذكاء وألغاز</option>
-                                <option value="sports">رياضة</option>
-                            </select>
-                        </div>
-                        <div class="form-group full-width">
-                            <label>صورة اللعبة</label>
-                            <input type="file" id="gameImgFile" accept="image/*" required>
-                        </div>
-                        <div class="form-group full-width">
-                            <label>طريقة إضافة اللعبة</label>
-                            <div class="radio-group">
-                                <label><input type="radio" name="sourceType" value="link" checked onchange="toggleSourceInput()"> إضافة برابط خارجي</label>
-                                <label><input type="radio" name="sourceType" value="upload" onchange="toggleSourceInput()"> رفع ملف اللعبة (HTML/ZIP)</label>
-                            </div>
-                        </div>
-                        <div class="form-group full-width" id="linkInputGroup">
-                            <label>رابط اللعبة</label>
-                            <input type="url" id="gameUrlLink">
-                        </div>
-                        <div class="form-group full-width" id="fileInputGroup" style="display: none;">
-                            <label>ملف اللعبة</label>
-                            <input type="file" id="gameFile" accept=".html,.zip">
-                        </div>
+        <section class="tab" id="tab-games">
+            <div class="card">
+                <h3 id="formTitle">➕ إضافة لعبة جديدة</h3>
+                <div class="form-grid">
+                    <div><label>اسم اللعبة</label><input id="g-title" maxlength="60"></div>
+                    <div><label>التصنيف</label>
+                        <select id="g-category">
+                            <option value="action">أكشن</option>
+                            <option value="cars">سيارات</option>
+                            <option value="puzzle">ذكاء وألغاز</option>
+                            <option value="sports">رياضة</option>
+                            <option value="adventure">مغامرات</option>
+                        </select>
                     </div>
-                    <div class="progress-bar-container" id="progressContainer"><div class="progress-bar" id="progressBar"></div></div>
-                    <span id="statusMessage"></span>
-                    <button type="submit" class="btn-submit" id="submitBtn">🚀 رفع وإضافة اللعبة</button>
-                </form>
+                    <div class="full"><label>رابط اللعبة (https://...)</label><input id="g-url" dir="ltr" placeholder="https://"></div>
+                    <div class="full"><label>رابط الصورة (https://...)</label><input id="g-img" dir="ltr" placeholder="https://"></div>
+                    <div><label>الترتيب (الأصغر يظهر الأول)</label><input id="g-order" type="number" value="100"></div>
+                    <div class="checks">
+                        <label><input type="checkbox" id="g-featured"> ⭐ مميزة</label>
+                        <label><input type="checkbox" id="g-hidden"> 🙈 مخفية</label>
+                    </div>
+                    <div class="full preview">
+                        <img id="pv-img" alt="">
+                        <div><b id="pv-title">معاينة الكارت</b><div class="muted" style="font-size:12px;">كده هيظهر للاعبين</div></div>
+                    </div>
+                </div>
+                <div class="row-actions">
+                    <button class="btn" id="g-save">💾 حفظ</button>
+                    <button class="btn green" id="g-test">▶️ جرّب اللعبة</button>
+                    <button class="btn gray" id="g-cancel" style="display:none;">إلغاء التعديل</button>
+                </div>
             </div>
-            
-            <div class="section-title">الألعاب الحالية</div>
-            <div class="admin-card table-responsive">
-                <table>
-                    <thead><tr><th>صورة</th><th>اسم اللعبة</th><th>التصنيف</th><th>إجراء</th></tr></thead>
-                    <tbody id="gamesTableBody"></tbody>
-                </table>
+
+            <div class="card">
+                <h3>كل الألعاب (<span id="gamesCount">0</span>)</h3>
+                <div class="table-wrap"><table>
+                    <thead><tr><th>الصورة</th><th>الاسم</th><th>التصنيف</th><th>ترتيب</th><th>مرات اللعب</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+                    <tbody id="gamesBody"></tbody>
+                </table></div>
             </div>
-        </div>
+        </section>
 
         <!-- اللاعبين -->
-        <div id="users-section" style="display: none;">
-            <div class="section-title">بيانات اللاعبين</div>
-            <div class="admin-card table-responsive">
-                <table>
-                    <thead><tr><th>الاسم</th><th>الإيميل</th><th>الألعاب</th><th>الدقائق</th><th>النقاط</th></tr></thead>
-                    <tbody id="usersTableBody"></tbody>
-                </table>
+        <section class="tab" id="tab-users">
+            <div class="card">
+                <div class="toolbar">
+                    <input id="u-search" placeholder="🔍 ابحث بالاسم أو الإيميل">
+                    <select id="u-sort">
+                        <option value="points">الأعلى نقاطاً</option>
+                        <option value="playMinutes">الأكثر وقت لعب</option>
+                        <option value="gamesPlayed">الأكثر ألعاباً</option>
+                        <option value="lastLogin">آخر دخول</option>
+                        <option value="createdAt">الأحدث تسجيلاً</option>
+                    </select>
+                    <button class="btn green" id="u-export">⬇️ تصدير CSV</button>
+                </div>
+                <div class="muted" style="font-size:13px; margin-bottom:8px;">عدد اللاعبين: <b id="usersCount">0</b> — اضغط على أي لاعب لعرض كل تفاصيله</div>
+                <div class="table-wrap"><table>
+                    <thead><tr><th>اللاعب</th><th>الإيميل</th><th>النقاط</th><th>الدقايق</th><th>الألعاب</th><th>آخر دخول</th><th>الحالة</th></tr></thead>
+                    <tbody id="usersBody"></tbody>
+                </table></div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
-        import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-storage.js";
+        <!-- الإعدادات -->
+        <section class="tab" id="tab-settings">
+            <div class="card">
+                <h3>📢 إعلان أعلى الموقع</h3>
+                <label>نص الإعلان (سيبه فاضي لإخفائه)</label>
+                <textarea id="s-announce" rows="3" maxlength="200"></textarea>
+                <div style="margin-top:14px;" class="checks">
+                    <label><input type="checkbox" id="s-maint"> 🛠️ وضع الصيانة (الموقع يتقفل على اللاعبين وإنت بس تشوفه)</label>
+                </div>
+                <div class="row-actions"><button class="btn" id="s-save">💾 حفظ الإعدادات</button></div>
+            </div>
+            <div class="card">
+                <h3>ℹ️ ملاحظة</h3>
+                <p class="muted" style="font-size:14px; line-height:1.8;">عدد النقاط في الدقيقة (10) ثابت في الرولز والكود عشان الحماية. لو عايز تغيّره لازم يتغير في الاتنين.</p>
+            </div>
+        </section>
+    </main>
+</div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBNlJ-hiRIPKD4apbRbt331MSi5t0o2XGU",
-            authDomain: "asfour-games.firebaseapp.com",
-            projectId: "asfour-games",
-            storageBucket: "asfour-games.firebasestorage.app",
-            messagingSenderId: "232632114081",
-            appId: "1:232632114081:web:d81e9100a68252038b09e0"
+<div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
+<div id="toast"></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+    import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+    import { getFirestore, doc, collection, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc, getDocs, increment, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBNlJ-hiRIPKD4apbRbt331MSi5t0o2XGU",
+        authDomain: "asfour-games.firebaseapp.com",
+        projectId: "asfour-games",
+        storageBucket: "asfour-games.firebasestorage.app",
+        messagingSenderId: "232632114081",
+        appId: "1:232632114081:web:d81e9100a68252038b09e0"
+    };
+    const ADMIN_EMAIL = 'asfour.games67@gmail.com';
+    const CATS = { action: 'أكشن', cars: 'سيارات', puzzle: 'ذكاء وألغاز', sports: 'رياضة', adventure: 'مغامرات' };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+    const $ = (id) => document.getElementById(id);
+
+    let games = [], users = [];
+    let editingId = null;
+    let openUid = null;
+    let started = false;
+    let unsubs = [];
+
+    // ---------- أدوات ----------
+    function h(tag, props = {}, ...kids) {
+        const el = document.createElement(tag);
+        for (const [k, v] of Object.entries(props)) {
+            if (k === 'class') el.className = v;
+            else if (k === 'text') el.textContent = v;
+            else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+            else if (v !== false && v != null) el.setAttribute(k, v);
+        }
+        kids.flat().forEach(c => { if (c == null || c === false) return; el.append(c.nodeType ? c : document.createTextNode(String(c))); });
+        return el;
+    }
+    function safeUrl(u) {
+        try { const p = new URL(u); return (p.protocol === 'https:' || p.protocol === 'http:') ? p.href : ''; }
+        catch (e) { return ''; }
+    }
+    function toDate(ts) { return ts && ts.toDate ? ts.toDate() : null; }
+    function fmt(ts) {
+        const d = toDate(ts);
+        return d ? d.toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+    }
+    function ms(ts) { const d = toDate(ts); return d ? d.getTime() : 0; }
+    function num(n) { return Number(n || 0).toLocaleString('en-US'); }
+    function isPlayingNow(u) { return u.lastTick && (Date.now() - ms(u.lastTick)) < 150000; }
+    function toast(msg) {
+        const t = $('toast'); t.textContent = msg; t.style.display = 'block';
+        clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = 'none', 2500);
+    }
+    function fail(e) { console.error(e); alert('حصل خطأ: ' + (e.code || e.message || e)); }
+    function openModal(node) { const b = $('modalBox'); b.textContent = ''; b.append(node); $('modal').classList.add('open'); }
+    function closeModal() { $('modal').classList.remove('open'); $('modalBox').textContent = ''; openUid = null; }
+    $('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
+
+    // ---------- تسجيل الدخول ----------
+    $('loginBtn').addEventListener('click', async () => {
+        $('loginMsg').textContent = '';
+        try { await signInWithPopup(auth, provider); }
+        catch (e) {
+            const fb = ['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/web-storage-unsupported'];
+            if (fb.includes(e.code)) { try { await signInWithRedirect(auth, provider); } catch (e2) { $('loginMsg').textContent = 'تعذر تسجيل الدخول.'; } }
+            else if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') $('loginMsg').textContent = 'خطأ في التسجيل.';
+        }
+    });
+    getRedirectResult(auth).catch(() => {});
+    $('logoutBtn').addEventListener('click', () => signOut(auth));
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user && user.email === ADMIN_EMAIL && user.emailVerified) {
+            $('login-view').style.display = 'none';
+            $('app').style.display = 'block';
+            $('adminEmail').textContent = user.email;
+            startListeners();
+        } else {
+            stopListeners();
+            $('app').style.display = 'none';
+            $('login-view').style.display = 'flex';
+            if (user) {
+                $('loginMsg').textContent = 'غير مسموح: ' + (user.email || '') + ' ليس حساب الأدمن.';
+                await signOut(auth);
+            }
+        }
+    });
+
+    function stopListeners() { unsubs.forEach(u => u()); unsubs = []; started = false; games = []; users = []; }
+
+    function startListeners() {
+        if (started) return;
+        started = true;
+        unsubs.push(onSnapshot(collection(db, 'games'), (s) => {
+            games = s.docs.map(d => ({ id: d.id, ...d.data() }));
+            renderGames(); renderDash();
+        }, fail));
+        unsubs.push(onSnapshot(collection(db, 'users'), (s) => {
+            users = s.docs.map(d => ({ uid: d.id, ...d.data() }));
+            renderUsers(); renderDash();
+            if (openUid) showUser(openUid, false);
+        }, fail));
+        unsubs.push(onSnapshot(doc(db, 'settings', 'main'), (s) => {
+            const d = s.exists() ? s.data() : {};
+            $('s-announce').value = d.announcement || '';
+            $('s-maint').checked = !!d.maintenance;
+        }, () => {}));
+    }
+
+    // ---------- التابات ----------
+    $('tabs').addEventListener('click', (e) => {
+        const b = e.target.closest('.tab-btn'); if (!b) return;
+        document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        $('tab-' + b.dataset.tab).classList.add('active');
+    });
+
+    // ---------- نظرة عامة ----------
+    function renderDash() {
+        const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+        const weekAgo = Date.now() - 7 * 86400000;
+        const totalPoints = users.reduce((a, u) => a + (u.points || 0), 0);
+        const totalMins = users.reduce((a, u) => a + (u.playMinutes || 0), 0);
+        const activeToday = users.filter(u => ms(u.lastLogin) >= dayStart.getTime()).length;
+        const newWeek = users.filter(u => ms(u.createdAt) >= weekAgo).length;
+        const playingNow = users.filter(isPlayingNow).length;
+        const hidden = games.filter(g => g.hidden).length;
+
+        const cards = [
+            [users.length, 'إجمالي اللاعبين'], [activeToday, 'دخلوا النهاردة'],
+            [playingNow, '🟢 بيلعبوا الآن'], [newWeek, 'جدد آخر 7 أيام'],
+            [games.length, 'عدد الألعاب (' + hidden + ' مخفية)'], [num(totalMins), 'إجمالي دقايق اللعب'],
+            [num(totalPoints), 'إجمالي النقاط'], [num(games.reduce((a, g) => a + (g.plays || 0), 0)), 'إجمالي مرات اللعب']
+        ];
+        const box = $('dashStats'); box.textContent = '';
+        cards.forEach(([v, l]) => box.append(h('div', { class: 'stat' }, h('b', { text: v }), h('span', { text: l }))));
+
+        const tg = $('topGames'); tg.textContent = '';
+        [...games].sort((a, b) => (b.plays || 0) - (a.plays || 0)).slice(0, 5).forEach((g, i) =>
+            tg.append(h('div', { class: 'list-line' }, h('span', { text: (i + 1) + '. ' + (g.title || '') }), h('b', { text: num(g.plays) }))));
+        if (!games.length) tg.append(h('div', { class: 'muted', text: 'لا توجد ألعاب' }));
+
+        const tu = $('topUsers'); tu.textContent = '';
+        [...users].sort((a, b) => (b.points || 0) - (a.points || 0)).slice(0, 5).forEach((u, i) =>
+            tu.append(h('div', { class: 'list-line' }, h('span', { text: (i + 1) + '. ' + (u.displayName || u.email || u.uid) }), h('b', { text: num(u.points) }))));
+        if (!users.length) tu.append(h('div', { class: 'muted', text: 'لا يوجد لاعبين' }));
+    }
+
+    // ---------- الألعاب ----------
+    function updatePreview() {
+        $('pv-title').textContent = $('g-title').value || 'معاينة الكارت';
+        $('pv-img').src = safeUrl($('g-img').value) || '';
+    }
+    ['g-title', 'g-img'].forEach(id => $(id).addEventListener('input', updatePreview));
+
+    function resetForm() {
+        editingId = null;
+        $('formTitle').textContent = '➕ إضافة لعبة جديدة';
+        ['g-title', 'g-url', 'g-img'].forEach(id => $(id).value = '');
+        $('g-category').value = 'action';
+        $('g-order').value = 100;
+        $('g-featured').checked = false; $('g-hidden').checked = false;
+        $('g-cancel').style.display = 'none';
+        updatePreview();
+    }
+    $('g-cancel').addEventListener('click', resetForm);
+
+    function editGame(g) {
+        editingId = g.id;
+        $('formTitle').textContent = '✏️ تعديل: ' + (g.title || '');
+        $('g-title').value = g.title || ''; $('g-url').value = g.url || ''; $('g-img').value = g.img || '';
+        $('g-category').value = g.category || 'action';
+        $('g-order').value = Number.isFinite(g.order) ? g.order : 100;
+        $('g-featured').checked = !!g.featured; $('g-hidden').checked = !!g.hidden;
+        $('g-cancel').style.display = 'inline-block';
+        updatePreview();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    $('g-save').addEventListener('click', async () => {
+        const title = $('g-title').value.trim();
+        const url = safeUrl($('g-url').value.trim());
+        const img = safeUrl($('g-img').value.trim());
+        if (!title) return alert('اكتب اسم اللعبة');
+        if (!url) return alert('رابط اللعبة لازم يبدأ بـ https://');
+        if (!img) return alert('رابط الصورة لازم يبدأ بـ https://');
+        const data = {
+            title, url, img,
+            category: $('g-category').value,
+            order: parseInt($('g-order').value, 10) || 0,
+            featured: $('g-featured').checked,
+            hidden: $('g-hidden').checked
         };
+        try {
+            if (editingId) { await setDoc(doc(db, 'games', editingId), data, { merge: true }); toast('تم تعديل اللعبة ✅'); }
+            else { await addDoc(collection(db, 'games'), { ...data, plays: 0, createdAt: serverTimestamp() }); toast('تمت إضافة اللعبة ✅'); }
+            resetForm();
+        } catch (e) { fail(e); }
+    });
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
-        const db = getFirestore(app);
-        const storage = getStorage(app);
+    $('g-test').addEventListener('click', () => {
+        const url = safeUrl($('g-url').value.trim());
+        if (!url) return alert('اكتب رابط اللعبة الأول');
+        const frame = h('iframe', { class: 'test', src: url, allowfullscreen: 'true', allow: 'fullscreen; autoplay; gamepad',
+            sandbox: 'allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-forms' });
+        openModal(h('div', {}, h('div', { class: 'box-head' }, h('b', { text: 'تجربة اللعبة' }), h('button', { class: 'btn gray sm', onclick: closeModal, text: 'إغلاق' })), frame));
+    });
 
-        const ADMIN_EMAIL = "asfour.games67@gmail.com";
-
-        document.getElementById('loginBtn').addEventListener('click', () => { signInWithPopup(auth, provider).catch(err => alert("حدث خطأ")); });
-        document.getElementById('logoutBtn').addEventListener('click', () => { signOut(auth); });
-
-        onAuthStateChanged(auth, (user) => {
-            if (user && user.email === ADMIN_EMAIL) {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('sidebar').style.display = 'flex';
-                document.getElementById('main-content').style.display = 'block';
-                loadGames();
-                loadUsers();
-            } else if (user) {
-                alert("عذراً، هذا الحساب غير مصرح له!");
-                signOut(auth);
-            } else {
-                document.getElementById('login-screen').style.display = 'flex';
-                document.getElementById('sidebar').style.display = 'none';
-                document.getElementById('main-content').style.display = 'none';
-            }
+    function renderGames() {
+        $('gamesCount').textContent = games.length;
+        const body = $('gamesBody'); body.textContent = '';
+        [...games].sort((a, b) => (Number.isFinite(a.order) ? a.order : 9999) - (Number.isFinite(b.order) ? b.order : 9999)).forEach(g => {
+            const status = [];
+            if (g.hidden) status.push(h('span', { class: 'pill off', text: 'مخفية' })); else status.push(h('span', { class: 'pill ok', text: 'ظاهرة' }));
+            if (g.featured) status.push(' ', h('span', { class: 'pill gold', text: '⭐' }));
+            body.append(h('tr', {},
+                h('td', {}, h('img', { class: 'thumb', src: safeUrl(g.img), alt: '' })),
+                h('td', { text: g.title || '' }),
+                h('td', { text: CATS[g.category] || g.category || '—' }),
+                h('td', { text: Number.isFinite(g.order) ? g.order : '—' }),
+                h('td', { text: num(g.plays) }),
+                h('td', {}, status),
+                h('td', {},
+                    h('button', { class: 'btn sm', text: 'تعديل', onclick: () => editGame(g) }), ' ',
+                    h('button', { class: 'btn sm gray', text: g.hidden ? 'إظهار' : 'إخفاء', onclick: () => updateDoc(doc(db, 'games', g.id), { hidden: !g.hidden }).catch(fail) }), ' ',
+                    h('button', { class: 'btn sm orange', text: g.featured ? 'إلغاء التمييز' : 'تمييز', onclick: () => updateDoc(doc(db, 'games', g.id), { featured: !g.featured }).catch(fail) }), ' ',
+                    h('button', { class: 'btn sm red', text: 'حذف', onclick: async () => {
+                        if (!confirm('متأكد إنك عايز تحذف "' + (g.title || '') + '" نهائياً؟')) return;
+                        try { await deleteDoc(doc(db, 'games', g.id)); toast('تم الحذف'); } catch (e) { fail(e); }
+                    } }))
+            ));
         });
+        if (!games.length) body.append(h('tr', {}, h('td', { colspan: 7, class: 'muted', text: 'لا توجد ألعاب بعد' })));
+    }
 
-        window.toggleSourceInput = function() {
-            const sourceType = document.querySelector('input[name="sourceType"]:checked').value;
-            if (sourceType === 'link') {
-                document.getElementById('linkInputGroup').style.display = 'flex';
-                document.getElementById('fileInputGroup').style.display = 'none';
-                document.getElementById('gameUrlLink').required = true;
-                document.getElementById('gameFile').required = false;
-            } else {
-                document.getElementById('linkInputGroup').style.display = 'none';
-                document.getElementById('fileInputGroup').style.display = 'flex';
-                document.getElementById('gameUrlLink').required = false;
-                document.getElementById('gameFile').required = true;
-            }
-        }
+    // ---------- اللاعبين ----------
+    function filteredUsers() {
+        const q = $('u-search').value.trim().toLowerCase();
+        const key = $('u-sort').value;
+        const val = (u) => (key === 'lastLogin' || key === 'createdAt') ? ms(u[key]) : (u[key] || 0);
+        return users.filter(u => !q || String(u.displayName || '').toLowerCase().includes(q) || String(u.email || '').toLowerCase().includes(q))
+            .sort((a, b) => val(b) - val(a));
+    }
+    $('u-search').addEventListener('input', renderUsers);
+    $('u-sort').addEventListener('change', renderUsers);
 
-        async function uploadFile(file, folderName) {
-            return new Promise((resolve, reject) => {
-                const storageRef = ref(storage, folderName + '/' + Date.now() + "_" + file.name);
-                const uploadTask = uploadBytesResumable(storageRef, file);
-                document.getElementById('progressContainer').style.display = 'block';
+    function avatarEl(u) {
+        const a = h('span', { class: 'avatar' });
+        const p = safeUrl(u.photoURL);
+        if (p) a.append(h('img', { src: p, alt: '' })); else a.textContent = (u.displayName || '؟').charAt(0);
+        return a;
+    }
+    function statusPills(u) {
+        const out = [];
+        if (u.banned) out.push(h('span', { class: 'pill bad', text: 'محظور' }));
+        if (isPlayingNow(u)) out.push(h('span', { class: 'pill ok', text: '🟢 بيلعب' }));
+        if (!out.length) out.push(h('span', { class: 'pill off', text: 'عادي' }));
+        return out;
+    }
 
-                uploadTask.on('state_changed', 
-                    (snapshot) => {
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        document.getElementById('progressBar').style.width = progress + '%';
-                        document.getElementById('statusMessage').innerText = `جاري الرفع: ${Math.round(progress)}%`;
-                    }, 
-                    (error) => reject(error), 
-                    () => getDownloadURL(uploadTask.snapshot.ref).then(resolve)
-                );
-            });
-        }
+    function renderUsers() {
+        const list = filteredUsers();
+        $('usersCount').textContent = users.length;
+        const body = $('usersBody'); body.textContent = '';
+        list.forEach(u => body.append(h('tr', { class: 'clickable', onclick: () => showUser(u.uid, true) },
+            h('td', {}, avatarEl(u), ' ', u.displayName || '—'),
+            h('td', { text: u.email || '—' }),
+            h('td', { text: num(u.points) }),
+            h('td', { text: num(u.playMinutes) }),
+            h('td', { text: num(u.gamesPlayed) }),
+            h('td', { text: fmt(u.lastLogin) }),
+            h('td', {}, statusPills(u)))));
+        if (!list.length) body.append(h('tr', {}, h('td', { colspan: 7, class: 'muted', text: 'لا يوجد لاعبين' })));
+    }
 
-        document.getElementById('addGameForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true; btn.innerText = "⏳ جاري الرفع...";
-            
-            try {
-                const imgFile = document.getElementById('gameImgFile').files[0];
-                const uploadedImgUrl = await uploadFile(imgFile, "images");
-                
-                let finalGameUrl = "";
-                const sourceType = document.querySelector('input[name="sourceType"]:checked').value;
-                if (sourceType === 'link') {
-                    finalGameUrl = document.getElementById('gameUrlLink').value;
-                } else {
-                    const gameFile = document.getElementById('gameFile').files[0];
-                    finalGameUrl = await uploadFile(gameFile, "games");
-                }
+    async function showUser(uid, load) {
+        const u = users.find(x => x.uid === uid);
+        if (!u) { closeModal(); return; }
+        openUid = uid;
+        const ref = doc(db, 'users', uid);
+        const playsBox = h('div', { class: 'table-wrap' }, h('div', { class: 'muted', text: 'جاري تحميل سجل الألعاب...' }));
 
-                document.getElementById('statusMessage').innerText = "جاري الحفظ...";
-                await addDoc(collection(db, "games"), {
-                    title: document.getElementById('gameTitle').value,
-                    category: document.getElementById('gameCategory').value,
-                    img: uploadedImgUrl, url: finalGameUrl, timestamp: new Date()
-                });
+        const info = (label, value) => h('div', { class: 'info' }, h('span', { text: label }), h('b', { text: value }));
+        const node = h('div', {},
+            h('div', { class: 'box-head' }, h('b', { text: 'تفاصيل اللاعب' }), h('button', { class: 'btn gray sm', text: 'إغلاق', onclick: closeModal })),
+            h('div', { class: 'detail-head' }, avatarEl(u),
+                h('div', {}, h('div', { style: 'font-size:18px;font-weight:800;', text: u.displayName || '—' }), h('div', { class: 'muted', style: 'font-size:13px;', text: u.email || '' }), h('div', {}, statusPills(u)))),
+            h('div', { class: 'info-grid' },
+                info('النقاط', num(u.points)), info('دقايق اللعب', num(u.playMinutes)),
+                info('الألعاب المختلفة', num(u.gamesPlayed)), info('تاريخ التسجيل', fmt(u.createdAt)),
+                info('آخر دخول', fmt(u.lastLogin)), info('آخر نشاط لعب', fmt(u.lastTick)),
+                info('معرّف المستخدم (UID)', u.uid)),
+            h('div', { class: 'row-actions', style: 'margin:0 0 16px;' },
+                h('button', { class: 'btn sm green', text: '➕/➖ تعديل النقاط', onclick: async () => {
+                    const v = parseInt(prompt('اكتب الرقم (موجب للإضافة، سالب للخصم):'), 10);
+                    if (!Number.isFinite(v)) return;
+                    try { await updateDoc(ref, { points: increment(v) }); toast('تم'); } catch (e) { fail(e); }
+                } }),
+                h('button', { class: 'btn sm', text: '🎯 تعيين النقاط', onclick: async () => {
+                    const v = parseInt(prompt('النقاط الجديدة:', u.points || 0), 10);
+                    if (!Number.isFinite(v) || v < 0) return;
+                    try { await updateDoc(ref, { points: v }); toast('تم'); } catch (e) { fail(e); }
+                } }),
+                h('button', { class: 'btn sm ' + (u.banned ? 'green' : 'red'), text: u.banned ? '✅ فك الحظر' : '🚫 حظر من جمع النقاط', onclick: async () => {
+                    if (!confirm(u.banned ? 'فك الحظر؟' : 'حظر اللاعب ده من جمع النقاط؟')) return;
+                    try { await updateDoc(ref, { banned: !u.banned }); toast('تم'); } catch (e) { fail(e); }
+                } }),
+                h('button', { class: 'btn sm orange', text: '♻️ تصفير الإحصائيات', onclick: async () => {
+                    if (!confirm('هيتصفر عدد الألعاب والدقايق وسجل الألعاب (النقاط تفضل زي ما هي). متأكد؟')) return;
+                    try {
+                        const snap = await getDocs(collection(db, 'users', uid, 'plays'));
+                        const b = writeBatch(db);
+                        b.update(ref, { gamesPlayed: 0, playMinutes: 0 });
+                        snap.forEach(d => b.delete(d.ref));
+                        await b.commit(); toast('تم التصفير'); loadPlays(uid, playsBox);
+                    } catch (e) { fail(e); }
+                } })),
+            h('h3', { style: 'margin-bottom:8px;', text: '🎮 سجل الألعاب' }),
+            playsBox);
 
-                alert("✅ تمت الإضافة بنجاح!");
-                e.target.reset();
-                document.getElementById('progressContainer').style.display = 'none';
-                document.getElementById('statusMessage').innerText = "";
-            } catch (error) { alert("❌ خطأ: " + error.message); } 
-            finally { btn.disabled = false; btn.innerText = "🚀 رفع وإضافة اللعبة"; }
-        });
+        if (load) openModal(node);
+        else { const b = $('modalBox'); b.textContent = ''; b.append(node); }
+        loadPlays(uid, playsBox);
+    }
 
-        function loadGames() {
-            onSnapshot(collection(db, "games"), (snapshot) => {
-                const tbody = document.getElementById('gamesTableBody'); tbody.innerHTML = '';
-                snapshot.forEach((docSnap) => {
-                    const game = docSnap.data();
-                    let catName = {"adventure":"مغامرات", "action":"أكشن", "cars":"سيارات", "puzzle":"ذكاء", "sports":"رياضة"};
-                    tbody.innerHTML += `<tr>
-                        <td><img src="${game.img}" class="game-img-preview"></td>
-                        <td style="font-weight:bold;">${game.title}</td>
-                        <td>${catName[game.category] || game.category}</td>
-                        <td><button class="btn-delete" onclick="deleteGame('${docSnap.id}')">حذف</button></td>
-                    </tr>`;
-                });
-            });
-        }
+    async function loadPlays(uid, box) {
+        try {
+            const snap = await getDocs(collection(db, 'users', uid, 'plays'));
+            const rows = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.minutes || 0) - (a.minutes || 0));
+            box.textContent = '';
+            if (!rows.length) { box.append(h('div', { class: 'muted', text: 'لا يوجد سجل بعد (السجل بيبدأ من بعد تحديث الموقع).' })); return; }
+            box.append(h('table', {},
+                h('thead', {}, h('tr', {}, h('th', { text: 'اللعبة' }), h('th', { text: 'مرات الفتح' }), h('th', { text: 'الدقايق' }), h('th', { text: 'آخر لعب' }))),
+                h('tbody', {}, rows.map(r => h('tr', {}, h('td', { text: r.title || r.id }), h('td', { text: num(r.count) }), h('td', { text: num(r.minutes) }), h('td', { text: fmt(r.lastPlayed) }))))));
+        } catch (e) { box.textContent = ''; box.append(h('div', { class: 'muted', text: 'تعذر تحميل السجل.' })); }
+    }
 
-        window.deleteGame = async function(id) { if(confirm("حذف اللعبة؟")) await deleteDoc(doc(db, "games", id)); }
+    $('u-export').addEventListener('click', () => {
+        const esc = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+        const head = ['الاسم', 'الإيميل', 'UID', 'النقاط', 'دقايق اللعب', 'الألعاب', 'تاريخ التسجيل', 'آخر دخول', 'محظور'];
+        const rows = filteredUsers().map(u => [u.displayName, u.email, u.uid, u.points || 0, u.playMinutes || 0, u.gamesPlayed || 0, fmt(u.createdAt), fmt(u.lastLogin), u.banned ? 'نعم' : 'لا']);
+        const csv = '\ufeff' + [head, ...rows].map(r => r.map(esc).join(',')).join('\n');
+        const a = h('a', { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })), download: 'players.csv' });
+        document.body.append(a); a.click(); a.remove();
+    });
 
-        function loadUsers() {
-            onSnapshot(collection(db, "users"), (snapshot) => {
-                const tbody = document.getElementById('usersTableBody'); tbody.innerHTML = '';
-                snapshot.forEach((docSnap) => {
-                    const user = docSnap.data();
-                    tbody.innerHTML += `<tr>
-                        <td>${user.displayName || 'لاعب'}</td>
-                        <td style="font-size:12px;">${user.email || 'مخفي'}</td>
-                        <td style="color:var(--success); font-weight:bold;">${user.gamesPlayed || 0}</td>
-                        <td>${user.playMinutes || 0}</td>
-                        <td style="color:#f59e0b; font-weight:bold;">${user.points || 0}</td>
-                    </tr>`;
-                });
-            });
-        }
+    // ---------- الإعدادات ----------
+    $('s-save').addEventListener('click', async () => {
+        try {
+            await setDoc(doc(db, 'settings', 'main'), {
+                announcement: $('s-announce').value.trim(),
+                maintenance: $('s-maint').checked
+            }, { merge: true });
+            toast('تم حفظ الإعدادات ✅');
+        } catch (e) { fail(e); }
+    });
 
-        window.switchTab = function(tab) {
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById('games-section').style.display = tab === 'games' ? 'block' : 'none';
-            document.getElementById('users-section').style.display = tab === 'users' ? 'block' : 'none';
-        }
-    </script>
+    updatePreview();
+</script>
 </body>
 </html>

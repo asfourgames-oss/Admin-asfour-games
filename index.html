@@ -121,6 +121,7 @@
         <button class="tab-btn active" data-tab="dash">📊 نظرة عامة</button>
         <button class="tab-btn" data-tab="games">🎮 الألعاب</button>
         <button class="tab-btn" data-tab="users">👥 اللاعبين</button>
+        <button class="tab-btn" data-tab="import">📥 استيراد ألعاب</button>
         <button class="tab-btn" data-tab="settings">⚙️ الإعدادات</button>
     </div>
 
@@ -195,6 +196,52 @@
                 <div class="table-wrap"><table>
                     <thead><tr><th>اللاعب</th><th>الإيميل</th><th>النقاط</th><th>الدقايق</th><th>الألعاب</th><th>آخر دخول</th><th>الحالة</th></tr></thead>
                     <tbody id="usersBody"></tbody>
+                </table></div>
+            </div>
+        </section>
+
+        <!-- استيراد ألعاب -->
+        <section class="tab" id="tab-import">
+            <div class="card">
+                <h3>📥 استيراد ألعاب من فيد (JSON)</h3>
+                <p class="muted" style="font-size:13px; line-height:1.8; margin-bottom:12px;">
+                    الصق رابط الفيد اللي في الـ Dashboard بتاع GamePix (أو أي شبكة تانية بتدّيك فيد JSON) واضغط "جلب".
+                    لو الجلب فشل (بسبب حماية المتصفح)، افتح الرابط في تاب جديد، انسخ كل الكلام اللي ظهر، والصقه في الخانة التانية.
+                </p>
+                <label>رابط الفيد</label>
+                <input id="imp-url" dir="ltr" placeholder="https://...">
+                <div class="row-actions">
+                    <button class="btn" id="imp-fetch">⬇️ جلب</button>
+                    <button class="btn gray" id="imp-more" style="display:none;">جلب الصفحة التالية</button>
+                </div>
+                <div style="margin-top:14px;">
+                    <label>أو الصق محتوى الـ JSON هنا</label>
+                    <textarea id="imp-json" rows="4" dir="ltr" placeholder='{"items":[...]}'></textarea>
+                    <div class="row-actions"><button class="btn gray" id="imp-parse">قراءة الـ JSON</button></div>
+                </div>
+            </div>
+
+            <div class="card" id="imp-results" style="display:none;">
+                <h3>النتائج (<span id="imp-count">0</span>) — المحدد: <span id="imp-selected">0</span></h3>
+                <div class="toolbar">
+                    <input id="imp-search" placeholder="🔍 فلتر بالاسم">
+                    <select id="imp-filter-cat">
+                        <option value="">كل التصنيفات</option>
+                        <option value="action">أكشن</option>
+                        <option value="cars">سيارات</option>
+                        <option value="puzzle">ذكاء وألغاز</option>
+                        <option value="sports">رياضة</option>
+                        <option value="adventure">مغامرات</option>
+                    </select>
+                </div>
+                <div class="row-actions" style="margin:0 0 12px;">
+                    <button class="btn gray sm" id="imp-all">تحديد الظاهر</button>
+                    <button class="btn gray sm" id="imp-none">إلغاء التحديد</button>
+                    <button class="btn green" id="imp-go">✅ استيراد المحدد</button>
+                </div>
+                <div class="table-wrap"><table>
+                    <thead><tr><th></th><th>الصورة</th><th>الاسم</th><th>التصنيف</th><th></th></tr></thead>
+                    <tbody id="imp-body"></tbody>
                 </table></div>
             </div>
         </section>
@@ -579,6 +626,129 @@
                 maintenance: $('s-maint').checked
             }, { merge: true });
             toast('تم حفظ الإعدادات ✅');
+        } catch (e) { fail(e); }
+    });
+
+    // ---------- استيراد ألعاب من فيد JSON ----------
+    let impItems = [];
+    let impNext = '';
+
+    function mapCat(raw) {
+        const s = String(Array.isArray(raw) ? raw.join(' ') : (raw || '')).toLowerCase();
+        if (/car|racing|drive|driving|truck|bike|moto|parking/.test(s)) return 'cars';
+        if (/sport|soccer|football|basket|golf|tennis|bowling|baseball|hockey|cricket/.test(s)) return 'sports';
+        if (/puzzle|brain|logic|match|mahjong|word|quiz|card|board|memory|trivia|solitaire|bubble/.test(s)) return 'puzzle';
+        if (/adventure|rpg|escape|platform|strategy|simulation|farm|idle|tycoon|runner|casual/.test(s)) return 'adventure';
+        return 'action';
+    }
+    function extractList(data) {
+        if (Array.isArray(data)) return data;
+        if (data && typeof data === 'object') {
+            for (const k of ['items', 'games', 'data', 'results', 'list']) if (Array.isArray(data[k])) return data[k];
+            const any = Object.values(data).find(Array.isArray);
+            if (any) return any;
+        }
+        return [];
+    }
+    function pick(o, keys) {
+        for (const k of keys) { const v = o && o[k]; if (typeof v === 'string' && v.trim()) return v.trim(); }
+        return '';
+    }
+    function normalizeItems(list) {
+        const existing = new Set(games.map(g => g.url));
+        const seen = new Set(impItems.map(i => i.url));
+        let added = 0;
+        list.forEach(o => {
+            const title = pick(o, ['title', 'name']);
+            const url = safeUrl(pick(o, ['url', 'embed_url', 'embedUrl', 'play_url', 'playUrl', 'game_url', 'link']));
+            const img = safeUrl(pick(o, ['image', 'banner_image', 'thumbnail', 'thumb', 'icon', 'img', 'thumbnail_url', 'image_url']));
+            if (!title || !url || !img || seen.has(url)) return;
+            seen.add(url);
+            impItems.push({ title, url, img, cat: mapCat(o.category || o.categories || o.genre || o.genres || o.tags), checked: false, exists: existing.has(url) });
+            added++;
+        });
+        return added;
+    }
+    function handleImpData(data) {
+        const list = extractList(data);
+        const added = normalizeItems(list);
+        impNext = (data && typeof data === 'object' && typeof data.next_url === 'string') ? data.next_url : '';
+        $('imp-more').style.display = impNext ? 'inline-block' : 'none';
+        if (!added) alert('ما لقيتش ألعاب صالحة في الفيد (محتاج لكل لعبة: اسم ورابط وصورة).');
+        $('imp-results').style.display = impItems.length ? 'block' : 'none';
+        renderImport();
+    }
+    async function fetchFeed(url) {
+        const safe = safeUrl(url);
+        if (!safe) return alert('اكتب رابط فيد صحيح يبدأ بـ https://');
+        try {
+            const res = await fetch(safe);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            handleImpData(await res.json());
+        } catch (e) {
+            console.error(e);
+            alert('تعذر جلب الفيد من المتصفح (غالباً حماية CORS).\nافتح الرابط في تاب جديد، انسخ كل المحتوى والصقه في خانة الـ JSON واضغط "قراءة الـ JSON".');
+        }
+    }
+    $('imp-fetch').addEventListener('click', () => { impItems = []; fetchFeed($('imp-url').value.trim()); });
+    $('imp-more').addEventListener('click', () => { if (impNext) fetchFeed(impNext); });
+    $('imp-parse').addEventListener('click', () => {
+        try { impItems = []; handleImpData(JSON.parse($('imp-json').value)); }
+        catch (e) { alert('الـ JSON مش صحيح. اتأكد إنك نسخت المحتوى كامل.'); }
+    });
+
+    function visibleImp() {
+        const q = $('imp-search').value.trim().toLowerCase();
+        const c = $('imp-filter-cat').value;
+        return impItems.filter(i => (!q || i.title.toLowerCase().includes(q)) && (!c || i.cat === c));
+    }
+    function updateImpCounts() {
+        $('imp-count').textContent = impItems.length;
+        $('imp-selected').textContent = impItems.filter(i => i.checked && !i.exists).length;
+    }
+    function renderImport() {
+        const body = $('imp-body'); body.textContent = '';
+        visibleImp().slice(0, 300).forEach(it => {
+            const cb = h('input', { type: 'checkbox', onchange: (e) => { it.checked = e.target.checked; updateImpCounts(); } });
+            cb.checked = it.checked && !it.exists; cb.disabled = it.exists;
+            const sel = h('select', { style: 'min-width:110px;', onchange: (e) => { it.cat = e.target.value; } },
+                Object.entries(CATS).map(([k, v]) => h('option', { value: k, text: v })));
+            sel.value = it.cat;
+            body.append(h('tr', {},
+                h('td', {}, cb),
+                h('td', {}, h('img', { class: 'thumb', src: it.img, alt: '' })),
+                h('td', {}, it.title, it.exists ? h('span', { class: 'pill off', text: 'موجودة' }) : null),
+                h('td', {}, sel),
+                h('td', {}, h('button', { class: 'btn sm green', text: '▶️', onclick: () => {
+                    const frame = h('iframe', { class: 'test', src: it.url, allowfullscreen: 'true', allow: 'fullscreen; autoplay; gamepad',
+                        sandbox: 'allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-forms' });
+                    openModal(h('div', {}, h('div', { class: 'box-head' }, h('b', { text: it.title }), h('button', { class: 'btn gray sm', onclick: closeModal, text: 'إغلاق' })), frame));
+                } }))));
+        });
+        if (visibleImp().length > 300) body.append(h('tr', {}, h('td', { colspan: 5, class: 'muted', text: 'بيظهر أول 300 بس، استخدم الفلتر.' })));
+        updateImpCounts();
+    }
+    $('imp-search').addEventListener('input', renderImport);
+    $('imp-filter-cat').addEventListener('change', renderImport);
+    $('imp-all').addEventListener('click', () => { visibleImp().slice(0, 300).forEach(i => { if (!i.exists) i.checked = true; }); renderImport(); });
+    $('imp-none').addEventListener('click', () => { impItems.forEach(i => i.checked = false); renderImport(); });
+
+    $('imp-go').addEventListener('click', async () => {
+        const chosen = impItems.filter(i => i.checked && !i.exists);
+        if (!chosen.length) return alert('اختار ألعاب الأول.');
+        if (!confirm('هيتم استيراد ' + chosen.length + ' لعبة. تكمّل؟')) return;
+        try {
+            for (let i = 0; i < chosen.length; i += 400) {
+                const batch = writeBatch(db);
+                chosen.slice(i, i + 400).forEach(g => batch.set(doc(collection(db, 'games')), {
+                    title: g.title, url: g.url, img: g.img, category: g.cat,
+                    order: 100, featured: false, hidden: false, plays: 0, createdAt: serverTimestamp()
+                }));
+                await batch.commit();
+            }
+            chosen.forEach(g => { g.exists = true; g.checked = false; });
+            renderImport();
+            toast('تم استيراد ' + chosen.length + ' لعبة ✅');
         } catch (e) { fail(e); }
     });
 

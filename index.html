@@ -150,8 +150,24 @@
                             <option value="adventure">مغامرات</option>
                         </select>
                     </div>
+                    <div class="full checks">
+                        <label><input type="radio" name="g-mode" value="link" checked> 🔗 إضافة برابط</label>
+                        <label><input type="radio" name="g-mode" value="upload"> 📱 رفع ملفات من التليفون</label>
+                    </div>
+                    <div class="full form-grid" id="mode-link">
                     <div class="full"><label>رابط اللعبة (https://...)</label><input id="g-url" dir="ltr" placeholder="https://"></div>
                     <div class="full"><label>رابط الصورة (https://...)</label><input id="g-img" dir="ltr" placeholder="https://"></div>
+                    </div>
+                    <div class="full form-grid" id="mode-upload" style="display:none;">
+                        <div class="full muted" style="font-size:13px; line-height:1.8;">
+                            ارفع لعبة <b>HTML في ملف واحد</b> (الحد 2 ميجا)، وصورة، وصوت اختياري (الحد 1.5 ميجا). الصورة بتتصغّر وتتضغط تلقائياً.
+                            <div id="upload-current" style="color:#065f46; font-weight:700; margin-top:4px;"></div>
+                        </div>
+                        <div><label>🖼️ صورة اللعبة</label><input type="file" id="f-img" accept="image/*"><div class="muted" style="font-size:12px; margin-top:4px;" id="f-img-info"></div></div>
+                        <div><label>📄 كود اللعبة (HTML)</label><input type="file" id="f-html" accept=".html,.htm,text/html"><div class="muted" style="font-size:12px; margin-top:4px;" id="f-html-info"></div></div>
+                        <div class="full"><label>🎵 صوت / موسيقى (اختياري)</label><input type="file" id="f-music" accept="audio/*"><div class="muted" style="font-size:12px; margin-top:4px;" id="f-music-info"></div>
+                            <label id="music-del-wrap" style="display:none; margin-top:8px; color:#991b1b;"><input type="checkbox" id="f-music-del"> 🗑️ حذف الموسيقى الحالية</label></div>
+                    </div>
                     <div><label>الترتيب (الأصغر يظهر الأول)</label><input id="g-order" type="number" value="100"></div>
                     <div class="checks">
                         <label><input type="checkbox" id="g-featured"> ⭐ مميزة</label>
@@ -271,7 +287,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
     import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
-    import { getFirestore, doc, collection, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc, getDocs, increment, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+    import { getFirestore, doc, collection, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, increment, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBNlJ-hiRIPKD4apbRbt331MSi5t0o2XGU",
@@ -421,11 +437,118 @@
     }
 
     // ---------- الألعاب ----------
+    const LIMITS = { html: 2200 * 1024, music: 1500 * 1024, total: 3300 * 1024 };
+    const CHUNK = 700000;
+    const SANDBOX_ISOLATED = 'allow-scripts allow-pointer-lock allow-popups allow-forms';
+    const SANDBOX_LINK = 'allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-forms';
+    let upImg = '', upHtml = null, upMusic = null, saving = false;
+
+    function safeImg(u) {
+        if (typeof u === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(u)) return u;
+        return safeUrl(u);
+    }
+    const kb = (n) => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+    const getMode = () => document.querySelector('input[name="g-mode"]:checked').value;
+
+    function setMode(m) {
+        document.querySelector('input[name="g-mode"][value="' + m + '"]').checked = true;
+        $('mode-link').style.display = m === 'link' ? '' : 'none';
+        $('mode-upload').style.display = m === 'upload' ? '' : 'none';
+        updatePreview();
+    }
+    document.querySelectorAll('input[name="g-mode"]').forEach(r => r.addEventListener('change', () => setMode(getMode())));
+
     function updatePreview() {
         $('pv-title').textContent = $('g-title').value || 'معاينة الكارت';
-        $('pv-img').src = safeUrl($('g-img').value) || '';
+        let src = '';
+        if (getMode() === 'upload') {
+            const old = editingId && games.find(g => g.id === editingId);
+            src = upImg || (old ? safeImg(old.img) : '');
+        } else src = safeImg($('g-img').value.trim()) || '';
+        if (src) $('pv-img').src = src; else $('pv-img').removeAttribute('src');
     }
     ['g-title', 'g-img'].forEach(id => $(id).addEventListener('input', updatePreview));
+
+    // ---------- أدوات الملفات ----------
+    function compressImage(file) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const im = new Image();
+            im.onload = () => {
+                const S = 360, c = document.createElement('canvas');
+                c.width = S; c.height = S;
+                const x = c.getContext('2d');
+                const m = Math.min(im.width, im.height);
+                x.drawImage(im, (im.width - m) / 2, (im.height - m) / 2, m, m, 0, 0, S, S);
+                URL.revokeObjectURL(url);
+                let q = 0.82, out = c.toDataURL('image/jpeg', q);
+                while (out.length > 120000 && q > 0.45) { q -= 0.1; out = c.toDataURL('image/jpeg', q); }
+                resolve(out);
+            };
+            im.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad image')); };
+            im.src = url;
+        });
+    }
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = () => resolve(String(r.result).split(',')[1] || '');
+            r.onerror = () => reject(r.error);
+            r.readAsDataURL(file);
+        });
+    }
+    function chunkStr(s, n) { const out = []; for (let i = 0; i < s.length; i += n) out.push(s.slice(i, i + n)); return out; }
+
+    async function writeParts(id, kind, file) {
+        const parts = chunkStr(await fileToBase64(file), CHUNK);
+        for (let i = 0; i < parts.length; i++) {
+            await setDoc(doc(db, 'gameFiles', id + '_' + kind + '_' + i), { gameId: id, kind, i, data: parts[i] });
+        }
+        return parts.length;
+    }
+    // يمسح الأجزاء من الرقم keepFrom لحد count
+    async function deleteParts(id, kind, count, keepFrom = 0) {
+        for (let i = keepFrom; i < count; i++) {
+            try { await deleteDoc(doc(db, 'gameFiles', id + '_' + kind + '_' + i)); } catch (e) { /* مش مشكلة */ }
+        }
+    }
+    async function loadParts(id, kind, n, type) {
+        const snaps = await Promise.all(Array.from({ length: n }, (_, i) => getDoc(doc(db, 'gameFiles', id + '_' + kind + '_' + i))));
+        const b64 = snaps.map(s => { if (!s.exists()) throw new Error('missing part'); return s.data().data; }).join('');
+        const bin = atob(b64), bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return new Blob([bytes], { type });
+    }
+
+    // ---------- اختيار الملفات ----------
+    $('f-img').addEventListener('change', async (e) => {
+        const f = e.target.files[0]; upImg = '';
+        if (!f) { $('f-img-info').textContent = ''; updatePreview(); return; }
+        try { upImg = await compressImage(f); $('f-img-info').textContent = '✅ تم ضغط الصورة: ' + kb(upImg.length); }
+        catch (err) { $('f-img-info').textContent = '❌ الصورة غير صالحة'; e.target.value = ''; }
+        updatePreview();
+    });
+    $('f-html').addEventListener('change', (e) => {
+        const f = e.target.files[0]; upHtml = null;
+        if (!f) { $('f-html-info').textContent = ''; return; }
+        if (f.size > LIMITS.html) { alert('ملف الكود كبير (' + kb(f.size) + ')، الحد الأقصى ' + kb(LIMITS.html)); e.target.value = ''; $('f-html-info').textContent = ''; return; }
+        upHtml = f; $('f-html-info').textContent = '✅ ' + f.name + ' — ' + kb(f.size);
+    });
+    $('f-music').addEventListener('change', (e) => {
+        const f = e.target.files[0]; upMusic = null;
+        if (!f) { $('f-music-info').textContent = ''; return; }
+        if (f.size > LIMITS.music) { alert('ملف الصوت كبير (' + kb(f.size) + ')، الحد الأقصى ' + kb(LIMITS.music)); e.target.value = ''; $('f-music-info').textContent = ''; return; }
+        upMusic = f; $('f-music-info').textContent = '✅ ' + f.name + ' — ' + kb(f.size);
+    });
+
+    function clearFiles() {
+        upImg = ''; upHtml = null; upMusic = null;
+        ['f-img', 'f-html', 'f-music'].forEach(id => $(id).value = '');
+        ['f-img-info', 'f-html-info', 'f-music-info'].forEach(id => $(id).textContent = '');
+        $('f-music-del').checked = false;
+        $('music-del-wrap').style.display = 'none';
+        $('upload-current').textContent = '';
+    }
 
     function resetForm() {
         editingId = null;
@@ -435,60 +558,144 @@
         $('g-order').value = 100;
         $('g-featured').checked = false; $('g-hidden').checked = false;
         $('g-cancel').style.display = 'none';
-        updatePreview();
+        clearFiles();
+        setMode('link');
     }
     $('g-cancel').addEventListener('click', resetForm);
 
     function editGame(g) {
         editingId = g.id;
+        clearFiles();
         $('formTitle').textContent = '✏️ تعديل: ' + (g.title || '');
-        $('g-title').value = g.title || ''; $('g-url').value = g.url || ''; $('g-img').value = g.img || '';
+        $('g-title').value = g.title || '';
+        $('g-url').value = g.url || '';
+        $('g-img').value = g.source === 'upload' ? '' : (g.img || '');
         $('g-category').value = g.category || 'action';
         $('g-order').value = Number.isFinite(g.order) ? g.order : 100;
         $('g-featured').checked = !!g.featured; $('g-hidden').checked = !!g.hidden;
         $('g-cancel').style.display = 'inline-block';
-        updatePreview();
+        if (g.source === 'upload') {
+            $('upload-current').textContent = 'الملفات الحالية محفوظة' + (g.hasMusic ? ' (ومعاها موسيقى)' : '') + '. اختار ملفات جديدة بس لو عايز تبدّلها.';
+            $('music-del-wrap').style.display = g.hasMusic ? '' : 'none';
+        }
+        setMode(g.source === 'upload' ? 'upload' : 'link');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    $('g-save').addEventListener('click', async () => {
-        const title = $('g-title').value.trim();
+    // ---------- الحفظ ----------
+    async function saveLink(base, old) {
         const url = safeUrl($('g-url').value.trim());
-        const img = safeUrl($('g-img').value.trim());
+        const img = safeImg($('g-img').value.trim());
+        if (!url) { alert('رابط اللعبة لازم يبدأ بـ https://'); return false; }
+        if (!img) { alert('رابط الصورة لازم يبدأ بـ https://'); return false; }
+        const data = { ...base, url, img, source: 'link' };
+        const wasUpload = old && old.source === 'upload';
+        if (wasUpload) Object.assign(data, { htmlParts: 0, musicParts: 0, musicType: '', hasMusic: false });
+        if (editingId) await setDoc(doc(db, 'games', editingId), data, { merge: true });
+        else await addDoc(collection(db, 'games'), { ...data, plays: 0, createdAt: serverTimestamp() });
+        if (wasUpload) { await deleteParts(old.id, 'html', old.htmlParts || 0); await deleteParts(old.id, 'music', old.musicParts || 0); }
+        toast(editingId ? 'تم تعديل اللعبة ✅' : 'تمت إضافة اللعبة ✅');
+        return true;
+    }
+
+    async function saveUpload(base, old) {
+        const wasUpload = !!old && old.source === 'upload';
+        if (!upHtml && !wasUpload) { alert('اختار ملف كود اللعبة (HTML)'); return false; }
+        if (!upImg && !old) { alert('اختار صورة اللعبة'); return false; }
+        const total = (upHtml ? upHtml.size : 0) + (upMusic ? upMusic.size : 0);
+        if (total > LIMITS.total) { alert('الحجم الإجمالي كبير (' + kb(total) + ')، الحد ' + kb(LIMITS.total)); return false; }
+
+        const btn = $('g-save');
+        const id = editingId || doc(collection(db, 'games')).id;
+        const data = { ...base, source: 'upload', url: '', img: upImg || (old ? old.img : '') };
+        let htmlParts = wasUpload ? (old.htmlParts || 0) : 0;
+        let musicParts = wasUpload ? (old.musicParts || 0) : 0;
+        let musicType = wasUpload ? (old.musicType || '') : '';
+        let filesChanged = false;
+
+        if (upHtml) {
+            btn.textContent = 'جاري رفع الكود...';
+            const n = await writeParts(id, 'html', upHtml);
+            await deleteParts(id, 'html', htmlParts, n);
+            htmlParts = n; filesChanged = true;
+        }
+        if (upMusic) {
+            btn.textContent = 'جاري رفع الصوت...';
+            const n = await writeParts(id, 'music', upMusic);
+            await deleteParts(id, 'music', musicParts, n);
+            musicParts = n; musicType = upMusic.type || 'audio/mpeg'; filesChanged = true;
+        } else if ($('f-music-del').checked && musicParts) {
+            await deleteParts(id, 'music', musicParts);
+            musicParts = 0; musicType = ''; filesChanged = true;
+        }
+        Object.assign(data, { htmlParts, musicParts, musicType, hasMusic: musicParts > 0 });
+        if (filesChanged || !wasUpload) data.fileVer = Date.now();
+
+        btn.textContent = 'جاري الحفظ...';
+        if (editingId) await setDoc(doc(db, 'games', id), data, { merge: true });
+        else await setDoc(doc(db, 'games', id), { ...data, plays: 0, createdAt: serverTimestamp() });
+        toast(editingId ? 'تم تعديل اللعبة ✅' : 'تمت إضافة اللعبة ✅');
+        return true;
+    }
+
+    $('g-save').addEventListener('click', async () => {
+        if (saving) return;
+        const title = $('g-title').value.trim();
         if (!title) return alert('اكتب اسم اللعبة');
-        if (!url) return alert('رابط اللعبة لازم يبدأ بـ https://');
-        if (!img) return alert('رابط الصورة لازم يبدأ بـ https://');
-        const data = {
-            title, url, img,
+        const base = {
+            title,
             category: $('g-category').value,
             order: parseInt($('g-order').value, 10) || 0,
             featured: $('g-featured').checked,
             hidden: $('g-hidden').checked
         };
+        const old = editingId ? games.find(g => g.id === editingId) : null;
+        const btn = $('g-save');
+        saving = true; btn.disabled = true;
         try {
-            if (editingId) { await setDoc(doc(db, 'games', editingId), data, { merge: true }); toast('تم تعديل اللعبة ✅'); }
-            else { await addDoc(collection(db, 'games'), { ...data, plays: 0, createdAt: serverTimestamp() }); toast('تمت إضافة اللعبة ✅'); }
-            resetForm();
+            const ok = getMode() === 'link' ? await saveLink(base, old) : await saveUpload(base, old);
+            if (ok) resetForm();
         } catch (e) { fail(e); }
+        finally { saving = false; btn.disabled = false; btn.textContent = '💾 حفظ'; }
     });
 
-    $('g-test').addEventListener('click', () => {
-        const url = safeUrl($('g-url').value.trim());
-        if (!url) return alert('اكتب رابط اللعبة الأول');
-        const frame = h('iframe', { class: 'test', src: url, allowfullscreen: 'true', allow: 'fullscreen; autoplay; gamepad',
-            sandbox: 'allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-forms' });
-        openModal(h('div', {}, h('div', { class: 'box-head' }, h('b', { text: 'تجربة اللعبة' }), h('button', { class: 'btn gray sm', onclick: closeModal, text: 'إغلاق' })), frame));
+    // ---------- تجربة اللعبة ----------
+    $('g-test').addEventListener('click', async () => {
+        let url = '', sandbox = SANDBOX_LINK, audio = null;
+        if (getMode() === 'upload') {
+            let blob = null;
+            if (upHtml) blob = new Blob([upHtml], { type: 'text/html' });
+            else {
+                const old = editingId && games.find(g => g.id === editingId);
+                if (old && old.source === 'upload' && old.htmlParts) {
+                    try { blob = await loadParts(old.id, 'html', old.htmlParts, 'text/html'); } catch (e) { return fail(e); }
+                }
+            }
+            if (!blob) return alert('اختار ملف كود اللعبة الأول');
+            url = URL.createObjectURL(blob); sandbox = SANDBOX_ISOLATED;
+            if (upMusic) audio = h('audio', { controls: 'true', src: URL.createObjectURL(upMusic), style: 'width:100%;margin-top:10px;' });
+        } else {
+            url = safeUrl($('g-url').value.trim());
+            if (!url) return alert('اكتب رابط اللعبة الأول');
+        }
+        const frame = h('iframe', { class: 'test', src: url, allowfullscreen: 'true', allow: 'fullscreen; autoplay; gamepad', sandbox });
+        openModal(h('div', {},
+            h('div', { class: 'box-head' }, h('b', { text: 'تجربة اللعبة' }),
+                h('button', { class: 'btn gray sm', text: 'إغلاق', onclick: () => { if (url.startsWith('blob:')) URL.revokeObjectURL(url); closeModal(); } })),
+            frame, audio));
     });
 
+    // ---------- جدول الألعاب ----------
     function renderGames() {
         $('gamesCount').textContent = games.length;
         const body = $('gamesBody'); body.textContent = '';
         [...games].sort((a, b) => (Number.isFinite(a.order) ? a.order : 9999) - (Number.isFinite(b.order) ? b.order : 9999)).forEach(g => {
             const status = [];
-            if (g.hidden) status.push(h('span', { class: 'pill off', text: 'مخفية' })); else status.push(h('span', { class: 'pill ok', text: 'ظاهرة' }));
+            status.push(h('span', { class: g.hidden ? 'pill off' : 'pill ok', text: g.hidden ? 'مخفية' : 'ظاهرة' }));
             if (g.featured) status.push(' ', h('span', { class: 'pill gold', text: '⭐' }));
+            if (g.source === 'upload') status.push(' ', h('span', { class: 'pill off', text: '📱 مرفوعة' + (g.hasMusic ? ' 🎵' : '') }));
             body.append(h('tr', {},
-                h('td', {}, h('img', { class: 'thumb', src: safeUrl(g.img), alt: '' })),
+                h('td', {}, h('img', { class: 'thumb', src: safeImg(g.img), alt: '' })),
                 h('td', { text: g.title || '' }),
                 h('td', { text: CATS[g.category] || g.category || '—' }),
                 h('td', { text: Number.isFinite(g.order) ? g.order : '—' }),
@@ -500,7 +707,11 @@
                     h('button', { class: 'btn sm orange', text: g.featured ? 'إلغاء التمييز' : 'تمييز', onclick: () => updateDoc(doc(db, 'games', g.id), { featured: !g.featured }).catch(fail) }), ' ',
                     h('button', { class: 'btn sm red', text: 'حذف', onclick: async () => {
                         if (!confirm('متأكد إنك عايز تحذف "' + (g.title || '') + '" نهائياً؟')) return;
-                        try { await deleteDoc(doc(db, 'games', g.id)); toast('تم الحذف'); } catch (e) { fail(e); }
+                        try {
+                            await deleteDoc(doc(db, 'games', g.id));
+                            if (g.source === 'upload') { await deleteParts(g.id, 'html', g.htmlParts || 0); await deleteParts(g.id, 'music', g.musicParts || 0); }
+                            toast('تم الحذف');
+                        } catch (e) { fail(e); }
                     } }))
             ));
         });

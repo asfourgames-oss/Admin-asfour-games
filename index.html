@@ -231,6 +231,10 @@
                     <button class="btn gray" id="imp-more" style="display:none;">جلب الصفحة التالية</button>
                 </div>
                 <div style="margin-top:14px;">
+                    <label>📂 أو اختار ملف JSON من التليفون (زي اللي نزّلته من Playgama)</label>
+                    <input type="file" id="imp-file" accept=".json,application/json,text/plain">
+                </div>
+                <div style="margin-top:14px;">
                     <label>أو الصق محتوى الـ JSON هنا</label>
                     <textarea id="imp-json" rows="4" dir="ltr" placeholder='{"items":[...]}'></textarea>
                     <div class="row-actions"><button class="btn gray" id="imp-parse">قراءة الـ JSON</button></div>
@@ -241,6 +245,8 @@
                 <h3>النتائج (<span id="imp-count">0</span>) — المحدد: <span id="imp-selected">0</span></h3>
                 <div class="toolbar">
                     <input id="imp-search" placeholder="🔍 فلتر بالاسم">
+                    <label style="display:flex;align-items:center;gap:6px;margin:0;color:#1f2937;white-space:nowrap;"><input type="checkbox" id="imp-desc"> في الوصف كمان</label>
+                    <label style="display:flex;align-items:center;gap:6px;margin:0;color:#1f2937;white-space:nowrap;"><input type="checkbox" id="imp-mobile"> 📱 جاهزة للموبايل بس</label>
                     <select id="imp-filter-cat">
                         <option value="">كل التصنيفات</option>
                         <option value="action">أكشن</option>
@@ -251,7 +257,7 @@
                     </select>
                 </div>
                 <div class="row-actions" style="margin:0 0 12px;">
-                    <button class="btn gray sm" id="imp-all">تحديد الظاهر</button>
+                    <button class="btn gray sm" id="imp-all">تحديد كل النتائج</button>
                     <button class="btn gray sm" id="imp-none">إلغاء التحديد</button>
                     <button class="btn green" id="imp-go">✅ استيراد المحدد</button>
                 </div>
@@ -845,21 +851,27 @@
     let impNext = '';
 
     function mapCat(raw) {
-        const s = String(Array.isArray(raw) ? raw.join(' ') : (raw || '')).toLowerCase();
-        if (/car|racing|drive|driving|truck|bike|moto|parking/.test(s)) return 'cars';
-        if (/sport|soccer|football|basket|golf|tennis|bowling|baseball|hockey|cricket/.test(s)) return 'sports';
-        if (/puzzle|brain|logic|match|mahjong|word|quiz|card|board|memory|trivia|solitaire|bubble/.test(s)) return 'puzzle';
-        if (/adventure|rpg|escape|platform|strategy|simulation|farm|idle|tycoon|runner|casual/.test(s)) return 'adventure';
+        const str = String(Array.isArray(raw) ? raw.join(' ') : (raw || '')).toLowerCase();
+        const T = new Set(str.split(/[^a-z0-9]+/));
+        const has = (...ws) => ws.some(w => T.has(w));
+        if (has('car', 'cars', 'racing', 'race', 'drive', 'driving', 'truck', 'trucks', 'bike', 'bikes', 'moto', 'motorcycle', 'parking', 'drift', 'drifting')) return 'cars';
+        if (has('sport', 'sports', 'soccer', 'football', 'basketball', 'golf', 'tennis', 'bowling', 'baseball', 'hockey', 'cricket')) return 'sports';
+        if (has('puzzle', 'puzzles', 'brain', 'logic', 'match', 'match3', 'mahjong', 'word', 'words', 'quiz', 'board', 'memory', 'trivia', 'solitaire', 'bubble', 'card', 'cards')) return 'puzzle';
+        if (has('adventure', 'rpg', 'escape', 'platformer', 'platform', 'strategy', 'simulation', 'farm', 'idle', 'tycoon', 'runner', 'casual', 'obby', 'sandbox', 'survival')) return 'adventure';
         return 'action';
     }
+    // بيدوّر جوه الملف (حتى لو الألعاب جوه صناديق متداخلة) على أي عنصر ليه اسم ورابط
     function extractList(data) {
-        if (Array.isArray(data)) return data;
-        if (data && typeof data === 'object') {
-            for (const k of ['items', 'games', 'data', 'results', 'list']) if (Array.isArray(data[k])) return data[k];
-            const any = Object.values(data).find(Array.isArray);
-            if (any) return any;
-        }
-        return [];
+        const urlKeys = ['gameURL', 'gameUrl', 'url', 'embed_url', 'embedUrl', 'play_url', 'playUrl', 'game_url', 'link'];
+        const out = [];
+        (function walk(node, depth) {
+            if (!node || typeof node !== 'object' || depth > 8) return;
+            if (Array.isArray(node)) { node.forEach(n => walk(n, depth + 1)); return; }
+            const isGame = (typeof node.title === 'string' || typeof node.name === 'string') && urlKeys.some(k => typeof node[k] === 'string');
+            if (isGame) out.push(node);
+            else Object.values(node).forEach(v => walk(v, depth + 1));
+        })(data, 0);
+        return out;
     }
     function pick(o, keys) {
         for (const k of keys) { const v = o && o[k]; if (typeof v === 'string' && v.trim()) return v.trim(); }
@@ -871,11 +883,23 @@
         let added = 0;
         list.forEach(o => {
             const title = pick(o, ['title', 'name']);
-            const url = safeUrl(pick(o, ['url', 'embed_url', 'embedUrl', 'play_url', 'playUrl', 'game_url', 'link']));
-            const img = safeUrl(pick(o, ['image', 'banner_image', 'thumbnail', 'thumb', 'icon', 'img', 'thumbnail_url', 'image_url']));
+            const url = safeUrl(pick(o, ['gameURL', 'gameUrl', 'url', 'embed_url', 'embedUrl', 'play_url', 'playUrl', 'game_url', 'link']));
+            let imgRaw = pick(o, ['image', 'banner_image', 'thumbnail', 'thumb', 'icon', 'img', 'thumbnail_url', 'image_url']);
+            if (!imgRaw && Array.isArray(o.images)) {
+                const strs = o.images.filter(x => typeof x === 'string');
+                imgRaw = strs.find(x => /icon/i.test(x)) || strs[0] || '';
+            }
+            const img = safeUrl(imgRaw);
             if (!title || !url || !img || seen.has(url)) return;
             seen.add(url);
-            impItems.push({ title, url, img, cat: mapCat(o.category || o.categories || o.genre || o.genres || o.tags), checked: false, exists: existing.has(url) });
+            const tagList = [].concat(o.genres || [], o.tags || [], o.category || [], o.categories || []).filter(x => typeof x === 'string');
+            impItems.push({
+                title, url, img,
+                cat: mapCat(tagList.length ? tagList : (o.genre || '')),
+                checked: false, exists: existing.has(url),
+                hay: tagList.join(' ').toLowerCase(), desc: String(o.description || '').toLowerCase(),
+                mobile: Array.isArray(o.mobileReady) && o.mobileReady.some(x => /android|ios/i.test(String(x)))
+            });
             added++;
         });
         return added;
@@ -908,10 +932,22 @@
         catch (e) { alert('الـ JSON مش صحيح. اتأكد إنك نسخت المحتوى كامل.'); }
     });
 
+    $('imp-file').addEventListener('change', (e) => {
+        const f = e.target.files[0]; if (!f) return;
+        const r = new FileReader();
+        r.onload = () => {
+            try { impItems = []; handleImpData(JSON.parse(String(r.result))); }
+            catch (err) { alert('الملف مش JSON صحيح.'); }
+            e.target.value = '';
+        };
+        r.readAsText(f);
+    });
+
     function visibleImp() {
         const q = $('imp-search').value.trim().toLowerCase();
         const c = $('imp-filter-cat').value;
-        return impItems.filter(i => (!q || i.title.toLowerCase().includes(q)) && (!c || i.cat === c));
+        const d = $('imp-desc').checked, m = $('imp-mobile').checked;
+        return impItems.filter(i => (!q || i.title.toLowerCase().includes(q) || i.hay.includes(q) || (d && i.desc.includes(q))) && (!c || i.cat === c) && (!m || i.mobile));
     }
     function updateImpCounts() {
         $('imp-count').textContent = impItems.length;
@@ -928,7 +964,7 @@
             body.append(h('tr', {},
                 h('td', {}, cb),
                 h('td', {}, h('img', { class: 'thumb', src: it.img, alt: '' })),
-                h('td', {}, it.title, it.exists ? h('span', { class: 'pill off', text: 'موجودة' }) : null),
+                h('td', {}, it.title, it.mobile ? ' 📱' : '', it.exists ? h('span', { class: 'pill off', text: 'موجودة' }) : null),
                 h('td', {}, sel),
                 h('td', {}, h('button', { class: 'btn sm green', text: '▶️', onclick: () => {
                     const frame = h('iframe', { class: 'test', src: it.url, allowfullscreen: 'true', allow: 'fullscreen; autoplay; gamepad',
@@ -941,12 +977,15 @@
     }
     $('imp-search').addEventListener('input', renderImport);
     $('imp-filter-cat').addEventListener('change', renderImport);
-    $('imp-all').addEventListener('click', () => { visibleImp().slice(0, 300).forEach(i => { if (!i.exists) i.checked = true; }); renderImport(); });
+    $('imp-desc').addEventListener('change', renderImport);
+    $('imp-mobile').addEventListener('change', renderImport);
+    $('imp-all').addEventListener('click', () => { visibleImp().forEach(i => { if (!i.exists) i.checked = true; }); renderImport(); });
     $('imp-none').addEventListener('click', () => { impItems.forEach(i => i.checked = false); renderImport(); });
 
     $('imp-go').addEventListener('click', async () => {
         const chosen = impItems.filter(i => i.checked && !i.exists);
         if (!chosen.length) return alert('اختار ألعاب الأول.');
+        if (chosen.length > 150 && !confirm('⚠️ ' + chosen.length + ' لعبة كتير: كل زيارة للموقع بتقرا كل الألعاب، وده بيستهلك حصة Firebase المجانية بسرعة. الأفضل تستورد أقل من 150 من أحسن الألعاب. تكمّل برضو؟')) return;
         if (!confirm('هيتم استيراد ' + chosen.length + ' لعبة. تكمّل؟')) return;
         try {
             for (let i = 0; i < chosen.length; i += 400) {

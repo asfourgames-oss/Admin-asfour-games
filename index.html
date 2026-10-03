@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#3b82f6">
     <title>لوحة تحكم عصفور</title>
     <style>
         :root { --bg: #f3f4f6; --card: #fff; --text: #1f2937; --muted: #6b7280; --primary: #3b82f6; --danger: #ef4444; --ok: #10b981; --warn: #f59e0b; --line: #e5e7eb; }
@@ -12,10 +13,7 @@
         button { cursor: pointer; font-weight: 600; }
         input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; background: #fff; outline: none; }
         input:focus, select:focus, textarea:focus { border-color: var(--primary); }
-        input[type=checkbox], input[type=radio] { width: auto; padding: 0; margin: 0; }
-        .mode-switch { gap: 10px; }
-        .mode-switch label { background: #e5e7eb; padding: 10px 14px; border-radius: 12px; cursor: pointer; font-size: 14px; }
-        .mode-switch label:has(input:checked) { background: var(--primary); color: #fff; }
+        input[type=checkbox] { width: auto; }
         label { font-size: 13px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; }
 
         .btn { border: none; border-radius: 10px; padding: 9px 14px; font-size: 13px; background: var(--primary); color: #fff; }
@@ -96,6 +94,8 @@
         .info span { display: block; font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
         .info b { font-size: 14px; word-break: break-all; }
         iframe.test { width: 100%; height: 55vh; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+        #tierEditor .trow { display: grid; grid-template-columns: 2fr 70px 1fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+        @media (max-width: 520px) { #tierEditor .trow { grid-template-columns: 1fr 60px; } }
         #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 18px; border-radius: 12px; font-size: 14px; z-index: 300; display: none; }
     </style>
 </head>
@@ -153,7 +153,7 @@
                             <option value="adventure">مغامرات</option>
                         </select>
                     </div>
-                    <div class="full checks mode-switch">
+                    <div class="full checks">
                         <label><input type="radio" name="g-mode" value="link" checked> 🔗 إضافة برابط</label>
                         <label><input type="radio" name="g-mode" value="upload"> 📱 رفع ملفات من التليفون</label>
                     </div>
@@ -201,7 +201,7 @@
         <section class="tab" id="tab-users">
             <div class="card">
                 <div class="toolbar">
-                    <input id="u-search" placeholder="🔍 ابحث بالاسم أو الإيميل">
+                    <input id="u-search" placeholder="🔍 ابحث بالاسم / اليوزر / ID / الإيميل">
                     <select id="u-sort">
                         <option value="points">الأعلى نقاطاً</option>
                         <option value="playMinutes">الأكثر وقت لعب</option>
@@ -213,7 +213,7 @@
                 </div>
                 <div class="muted" style="font-size:13px; margin-bottom:8px;">عدد اللاعبين: <b id="usersCount">0</b> — اضغط على أي لاعب لعرض كل تفاصيله</div>
                 <div class="table-wrap"><table>
-                    <thead><tr><th>اللاعب</th><th>الإيميل</th><th>النقاط</th><th>الدقايق</th><th>الألعاب</th><th>آخر دخول</th><th>الحالة</th></tr></thead>
+                    <thead><tr><th>اللاعب</th><th>اليوزر</th><th>ID</th><th>الإيميل</th><th>التصنيف</th><th>النقاط</th><th>الدقايق</th><th>الألعاب</th><th>آخر دخول</th><th>الحالة</th></tr></thead>
                     <tbody id="usersBody"></tbody>
                 </table></div>
             </div>
@@ -283,6 +283,18 @@
                 <div class="row-actions"><button class="btn" id="s-save">💾 حفظ الإعدادات</button></div>
             </div>
             <div class="card">
+                <h3>🏅 تصنيف النقاط</h3>
+                <label>الكلام اللي يظهر فوق التصنيفات للاعبين</label>
+                <textarea id="s-tiers-note" rows="3" maxlength="400" placeholder="مثال: كل ما تلعب أكتر بتكسب نقاط وتطلع لتصنيف أعلى!"></textarea>
+                <div style="margin-top:14px;"><label>التصنيفات (الاسم / الإيموجي / أقل عدد نقاط)</label></div>
+                <div id="tierEditor"></div>
+                <div class="row-actions">
+                    <button class="btn gray sm" id="t-add">➕ إضافة تصنيف</button>
+                    <button class="btn gray sm" id="t-reset">↩️ الرجوع للافتراضي</button>
+                    <button class="btn" id="t-save">💾 حفظ التصنيفات</button>
+                </div>
+            </div>
+            <div class="card">
                 <h3>ℹ️ ملاحظة</h3>
                 <p class="muted" style="font-size:14px; line-height:1.8;">عدد النقاط في الدقيقة (10) ثابت في الرولز والكود عشان الحماية. لو عايز تغيّره لازم يتغير في الاتنين.</p>
             </div>
@@ -337,6 +349,24 @@
         try { const p = new URL(u); return (p.protocol === 'https:' || p.protocol === 'http:') ? p.href : ''; }
         catch (e) { return ''; }
     }
+    // ---------- التصنيفات ----------
+    const DEFAULT_TIERS = [
+        { name: 'برونزي', emoji: '🥉', min: 0 },
+        { name: 'فضي', emoji: '🥈', min: 500 },
+        { name: 'ذهبي', emoji: '🥇', min: 2000 },
+        { name: 'بلاتيني', emoji: '💠', min: 5000 },
+        { name: 'ماسي', emoji: '💎', min: 10000 }
+    ];
+    let tiers = DEFAULT_TIERS.map(t => ({ ...t }));
+    function cleanTiers(arr) {
+        const out = (Array.isArray(arr) ? arr : []).map(t => ({ name: String(t.name || '').trim().slice(0, 20), emoji: String(t.emoji || '').trim().slice(0, 4), min: Math.max(0, parseInt(t.min, 10) || 0) })).filter(t => t.name);
+        out.sort((a, b) => a.min - b.min);
+        return out.length ? out : DEFAULT_TIERS.map(t => ({ ...t }));
+    }
+    function tierOf(points) { const p = Number(points || 0); let cur = tiers[0]; tiers.forEach(t => { if (p >= t.min) cur = t; }); return cur; }
+    function tierLabel(points) { const t = tierOf(points); return (t.emoji ? t.emoji + ' ' : '') + t.name; }
+    function uName(u) { return u.name || u.displayName || '—'; }
+
     function toDate(ts) { return ts && ts.toDate ? ts.toDate() : null; }
     function fmt(ts) {
         const d = toDate(ts);
@@ -402,6 +432,10 @@
             const d = s.exists() ? s.data() : {};
             $('s-announce').value = d.announcement || '';
             $('s-maint').checked = !!d.maintenance;
+            $('s-tiers-note').value = d.tiersNote || '';
+            tiers = cleanTiers(d.tiers && d.tiers.length ? d.tiers : DEFAULT_TIERS);
+            renderTierEditor();
+            renderUsers();
         }, () => {}));
     }
 
@@ -441,7 +475,7 @@
 
         const tu = $('topUsers'); tu.textContent = '';
         [...users].sort((a, b) => (b.points || 0) - (a.points || 0)).slice(0, 5).forEach((u, i) =>
-            tu.append(h('div', { class: 'list-line' }, h('span', { text: (i + 1) + '. ' + (u.displayName || u.email || u.uid) }), h('b', { text: num(u.points) }))));
+            tu.append(h('div', { class: 'list-line' }, h('span', { text: (i + 1) + '. ' + (uName(u) !== '—' ? uName(u) : (u.email || u.uid)) + ' · ' + tierLabel(u.points) }), h('b', { text: num(u.points) }))));
         if (!users.length) tu.append(h('div', { class: 'muted', text: 'لا يوجد لاعبين' }));
     }
 
@@ -732,7 +766,7 @@
         const q = $('u-search').value.trim().toLowerCase();
         const key = $('u-sort').value;
         const val = (u) => (key === 'lastLogin' || key === 'createdAt') ? ms(u[key]) : (u[key] || 0);
-        return users.filter(u => !q || String(u.displayName || '').toLowerCase().includes(q) || String(u.email || '').toLowerCase().includes(q))
+        return users.filter(u => !q || [u.name, u.displayName, u.googleName, u.username, u.playerId, u.email].some(v => String(v ?? '').toLowerCase().includes(q)))
             .sort((a, b) => val(b) - val(a));
     }
     $('u-search').addEventListener('input', renderUsers);
@@ -741,7 +775,7 @@
     function avatarEl(u) {
         const a = h('span', { class: 'avatar' });
         const p = safeUrl(u.photoURL);
-        if (p) a.append(h('img', { src: p, alt: '' })); else a.textContent = (u.displayName || '؟').charAt(0);
+        if (p) a.append(h('img', { src: p, alt: '' })); else a.textContent = (uName(u) || '؟').charAt(0);
         return a;
     }
     function statusPills(u) {
@@ -757,14 +791,17 @@
         $('usersCount').textContent = users.length;
         const body = $('usersBody'); body.textContent = '';
         list.forEach(u => body.append(h('tr', { class: 'clickable', onclick: () => showUser(u.uid, true) },
-            h('td', {}, avatarEl(u), ' ', u.displayName || '—'),
+            h('td', {}, avatarEl(u), ' ', uName(u)),
+            h('td', { text: u.username ? '@' + u.username : '—', dir: 'ltr' }),
+            h('td', { text: u.playerId ? '#' + u.playerId : '—' }),
             h('td', { text: u.email || '—' }),
+            h('td', {}, h('span', { class: 'pill gold', text: tierLabel(u.points) })),
             h('td', { text: num(u.points) }),
             h('td', { text: num(u.playMinutes) }),
             h('td', { text: num(u.gamesPlayed) }),
             h('td', { text: fmt(u.lastLogin) }),
             h('td', {}, statusPills(u)))));
-        if (!list.length) body.append(h('tr', {}, h('td', { colspan: 7, class: 'muted', text: 'لا يوجد لاعبين' })));
+        if (!list.length) body.append(h('tr', {}, h('td', { colspan: 10, class: 'muted', text: 'لا يوجد لاعبين' })));
     }
 
     async function showUser(uid, load) {
@@ -778,8 +815,10 @@
         const node = h('div', {},
             h('div', { class: 'box-head' }, h('b', { text: 'تفاصيل اللاعب' }), h('button', { class: 'btn gray sm', text: 'إغلاق', onclick: closeModal })),
             h('div', { class: 'detail-head' }, avatarEl(u),
-                h('div', {}, h('div', { style: 'font-size:18px;font-weight:800;', text: u.displayName || '—' }), h('div', { class: 'muted', style: 'font-size:13px;', text: u.email || '' }), h('div', {}, statusPills(u)))),
+                h('div', {}, h('div', { style: 'font-size:18px;font-weight:800;', text: uName(u) }), h('div', { class: 'muted', style: 'font-size:13px;', text: u.email || '' }), h('div', {}, statusPills(u)))),
             h('div', { class: 'info-grid' },
+                info('اليوزر', u.username ? '@' + u.username : '—'), info('رقم اللاعب (ID)', u.playerId ? '#' + u.playerId : '—'),
+                info('التصنيف', tierLabel(u.points)), info('اسم حساب Google', u.googleName || u.displayName || '—'),
                 info('النقاط', num(u.points)), info('دقايق اللعب', num(u.playMinutes)),
                 info('الألعاب المختلفة', num(u.gamesPlayed)), info('تاريخ التسجيل', fmt(u.createdAt)),
                 info('آخر دخول', fmt(u.lastLogin)), info('آخر نشاط لعب', fmt(u.lastTick)),
@@ -831,11 +870,41 @@
 
     $('u-export').addEventListener('click', () => {
         const esc = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-        const head = ['الاسم', 'الإيميل', 'UID', 'النقاط', 'دقايق اللعب', 'الألعاب', 'تاريخ التسجيل', 'آخر دخول', 'محظور'];
-        const rows = filteredUsers().map(u => [u.displayName, u.email, u.uid, u.points || 0, u.playMinutes || 0, u.gamesPlayed || 0, fmt(u.createdAt), fmt(u.lastLogin), u.banned ? 'نعم' : 'لا']);
+        const head = ['الاسم', 'اليوزر', 'ID', 'التصنيف', 'الإيميل', 'UID', 'النقاط', 'دقايق اللعب', 'الألعاب', 'تاريخ التسجيل', 'آخر دخول', 'محظور'];
+        const rows = filteredUsers().map(u => [uName(u), u.username, u.playerId, tierLabel(u.points), u.email, u.uid, u.points || 0, u.playMinutes || 0, u.gamesPlayed || 0, fmt(u.createdAt), fmt(u.lastLogin), u.banned ? 'نعم' : 'لا']);
         const csv = '\ufeff' + [head, ...rows].map(r => r.map(esc).join(',')).join('\n');
         const a = h('a', { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })), download: 'players.csv' });
         document.body.append(a); a.click(); a.remove();
+    });
+
+    // ---------- محرر التصنيفات ----------
+    let tierDraft = [];
+    function renderTierEditor() {
+        tierDraft = tiers.map(t => ({ ...t }));
+        drawTierRows();
+    }
+    function drawTierRows() {
+        const box = $('tierEditor'); box.textContent = '';
+        tierDraft.forEach((t, i) => {
+            const name = h('input', { value: t.name, placeholder: 'الاسم', maxlength: '20' });
+            const emo = h('input', { value: t.emoji, placeholder: '🏅', maxlength: '4' });
+            const min = h('input', { type: 'number', min: '0', value: String(t.min), placeholder: 'النقاط' });
+            name.addEventListener('input', () => t.name = name.value);
+            emo.addEventListener('input', () => t.emoji = emo.value);
+            min.addEventListener('input', () => t.min = min.value);
+            box.append(h('div', { class: 'trow' }, name, emo, min,
+                h('button', { class: 'btn red sm', text: '🗑️', onclick: () => { if (tierDraft.length <= 1) return; tierDraft.splice(i, 1); drawTierRows(); } })));
+        });
+    }
+    $('t-add').addEventListener('click', () => { tierDraft.push({ name: '', emoji: '🏅', min: (tierDraft.length ? Math.max(...tierDraft.map(t => parseInt(t.min, 10) || 0)) + 1000 : 0) }); drawTierRows(); });
+    $('t-reset').addEventListener('click', () => { tierDraft = DEFAULT_TIERS.map(t => ({ ...t })); drawTierRows(); });
+    $('t-save').addEventListener('click', async () => {
+        const clean = cleanTiers(tierDraft);
+        if (clean[0].min !== 0) { alert('أول تصنيف لازم يبدأ من 0 نقطة.'); return; }
+        try {
+            await setDoc(doc(db, 'settings', 'main'), { tiers: clean, tiersNote: $('s-tiers-note').value.trim() }, { merge: true });
+            toast('تم حفظ التصنيفات ✅');
+        } catch (e) { fail(e); }
     });
 
     // ---------- الإعدادات ----------

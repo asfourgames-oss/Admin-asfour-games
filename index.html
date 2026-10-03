@@ -12,7 +12,10 @@
         button { cursor: pointer; font-weight: 600; }
         input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; background: #fff; outline: none; }
         input:focus, select:focus, textarea:focus { border-color: var(--primary); }
-        input[type=checkbox] { width: auto; }
+        input[type=checkbox], input[type=radio] { width: auto; padding: 0; margin: 0; }
+        .mode-switch { gap: 10px; }
+        .mode-switch label { background: #e5e7eb; padding: 10px 14px; border-radius: 12px; cursor: pointer; font-size: 14px; }
+        .mode-switch label:has(input:checked) { background: var(--primary); color: #fff; }
         label { font-size: 13px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; }
 
         .btn { border: none; border-radius: 10px; padding: 9px 14px; font-size: 13px; background: var(--primary); color: #fff; }
@@ -150,7 +153,7 @@
                             <option value="adventure">مغامرات</option>
                         </select>
                     </div>
-                    <div class="full checks">
+                    <div class="full checks mode-switch">
                         <label><input type="radio" name="g-mode" value="link" checked> 🔗 إضافة برابط</label>
                         <label><input type="radio" name="g-mode" value="upload"> 📱 رفع ملفات من التليفون</label>
                     </div>

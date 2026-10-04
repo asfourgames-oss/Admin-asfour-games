@@ -283,6 +283,15 @@
                 <div class="row-actions"><button class="btn" id="s-save">💾 حفظ الإعدادات</button></div>
             </div>
             <div class="card">
+                <h3>⏱️ المسابقة الأسبوعية</h3>
+                <p style="font-size:13px;color:#6b7280;margin-bottom:8px;">الأسبوع 7 أيام، وآخر 5 ساعات منه بتتجمّد النقاط والتصنيف تلقائيًا، وبعدها بيبدأ أسبوع جديد من الصفر.</p>
+                <div id="contestInfo" style="font-weight:700;margin-bottom:10px;"></div>
+                <label>بداية الأسبوع الأول (بتوقيت جهازك)</label>
+                <input type="datetime-local" id="s-anchor">
+                <p style="font-size:12px;color:#b45309;margin:6px 0 10px;">⚠️ ماتغيّرش الموعد ده بعد ما المسابقة تبدأ، لأن ده بيغيّر ترقيم الأسابيع وتضيع النتايج.</p>
+                <div class="row-actions"><button class="btn" id="a-save">💾 حفظ الموعد</button></div>
+            </div>
+            <div class="card">
                 <h3>🏆 لوحة التصنيف والجوايز</h3>
                 <p style="font-size:13px;color:#6b7280;margin-bottom:8px;">التصنيف بيترتب تلقائي حسب نقاط اللاعبين. المكتوب هنا بيظهر فوق اللوحة.</p>
                 <label>الكلام اللي يظهر فوق التصنيف</label>
@@ -358,10 +367,32 @@
         users.forEach(x => { if (Number(x.points || 0) > p) better++; });
         return '#' + (better + 1);
     }
-    async function syncLb(uid, u, points) {
-        try {
-            await setDoc(doc(db, 'leaderboard', uid), { name: uName(u), username: u.username || '', playerId: u.playerId || 0, points: Number(points) || 0 });
-        } catch (e) { console.warn(e); }
+    // ---------- المسابقة الأسبوعية (نفس منطق الموقع والرولز) ----------
+    const DEFAULT_ANCHOR = 1791061200000;   // الأحد 4 أكتوبر 2026 12 منتصف الليل بتوقيت القاهرة
+    const WEEK_MS = 7 * 24 * 3600 * 1000;
+    const FREEZE_MS = 5 * 3600 * 1000;
+    let contestAnchor = DEFAULT_ANCHOR;
+    function contestNow() {
+        const t = Date.now(), el = t - contestAnchor;
+        if (el < 0) return { pending: true };
+        const week = Math.floor(el / WEEK_MS), end = contestAnchor + (week + 1) * WEEK_MS;
+        return { pending: false, week, end, frozen: t >= end - FREEZE_MS };
+    }
+    // تعديل نقاط الأسبوع الحالي للاعب (بالفرق) + تحديث لوحة التصنيف
+    async function adjustWeek(uid, u, delta) {
+        const c = contestNow();
+        if (c.pending) return;
+        const base = u.weekId === c.week ? Number(u.weekPoints || 0) : 0;
+        const nw = Math.max(0, base + delta);
+        const batch = writeBatch(db);
+        batch.update(doc(db, 'users', uid), { weekId: c.week, weekPoints: nw });
+        batch.set(doc(db, 'weeks', String(c.week), 'scores', uid), { name: uName(u), username: u.username || '', playerId: u.playerId || 0, points: nw, weekId: c.week });
+        await batch.commit();
+    }
+    async function removeFromBoard(uid) {
+        const c = contestNow();
+        if (c.pending) return;
+        try { await deleteDoc(doc(db, 'weeks', String(c.week), 'scores', uid)); } catch (e) { console.warn(e); }
     }
     function uName(u) { return u.name || u.displayName || '—'; }
 
@@ -430,6 +461,9 @@
             const d = s.exists() ? s.data() : {};
             $('s-announce').value = d.announcement || '';
             $('s-maint').checked = !!d.maintenance;
+            contestAnchor = Number(d.anchor) || DEFAULT_ANCHOR;
+            $('s-anchor').value = toLocalInput(contestAnchor);
+            renderContestInfo();
             $('s-rank-note').value = d.rankNote || '';
             prizes = Array.isArray(d.prizes) ? d.prizes.map(x => ({ rank: x.rank, text: x.text })) : [];
             renderPrizeEditor();
@@ -825,16 +859,16 @@
                 h('button', { class: 'btn sm green', text: '➕/➖ تعديل النقاط', onclick: async () => {
                     const v = parseInt(prompt('اكتب الرقم (موجب للإضافة، سالب للخصم):'), 10);
                     if (!Number.isFinite(v)) return;
-                    try { await updateDoc(ref, { points: increment(v) }); await syncLb(uid, u, Math.max(0, (u.points || 0) + v)); toast('تم'); } catch (e) { fail(e); }
+                    try { await updateDoc(ref, { points: increment(v) }); await adjustWeek(uid, u, v); toast('تم'); } catch (e) { fail(e); }
                 } }),
                 h('button', { class: 'btn sm', text: '🎯 تعيين النقاط', onclick: async () => {
                     const v = parseInt(prompt('النقاط الجديدة:', u.points || 0), 10);
                     if (!Number.isFinite(v) || v < 0) return;
-                    try { await updateDoc(ref, { points: v }); await syncLb(uid, u, v); toast('تم'); } catch (e) { fail(e); }
+                    try { await updateDoc(ref, { points: v }); toast('تم (النقاط الكلية فقط، نقاط الأسبوع زي ما هي)'); } catch (e) { fail(e); }
                 } }),
                 h('button', { class: 'btn sm ' + (u.banned ? 'green' : 'red'), text: u.banned ? '✅ فك الحظر' : '🚫 حظر من جمع النقاط', onclick: async () => {
                     if (!confirm(u.banned ? 'فك الحظر؟' : 'حظر اللاعب ده من جمع النقاط؟')) return;
-                    try { await updateDoc(ref, { banned: !u.banned }); toast('تم'); } catch (e) { fail(e); }
+                    try { await updateDoc(ref, { banned: !u.banned }); if (!u.banned) await removeFromBoard(uid); toast('تم'); } catch (e) { fail(e); }
                 } }),
                 h('button', { class: 'btn sm orange', text: '♻️ تصفير الإحصائيات', onclick: async () => {
                     if (!confirm('هيتصفر عدد الألعاب والدقايق وسجل الألعاب (النقاط تفضل زي ما هي). متأكد؟')) return;
@@ -902,6 +936,26 @@
             await setDoc(doc(db, 'settings', 'main'), { prizes: clean, rankNote: $('s-rank-note').value.trim() }, { merge: true });
             toast('تم حفظ الجوايز ✅');
         } catch (e) { fail(e); }
+    });
+
+    // ---------- إعدادات المسابقة ----------
+    function toLocalInput(ms) {
+        const d = new Date(ms), pad = (n) => String(n).padStart(2, '0');
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+    function renderContestInfo() {
+        const c = contestNow();
+        const box = $('contestInfo');
+        if (!box) return;
+        if (c.pending) box.textContent = '🏁 المسابقة لسه ما بدأتش · تبدأ ' + new Date(contestAnchor).toLocaleString('ar-EG');
+        else box.textContent = (c.frozen ? '🧊 مجمّد · ' : '▶️ شغّال · ') + 'الأسبوع رقم ' + (c.week + 1) + ' · ينتهي ' + new Date(c.end).toLocaleString('ar-EG');
+    }
+    setInterval(renderContestInfo, 30000);
+    $('a-save').addEventListener('click', async () => {
+        const v = new Date($('s-anchor').value).getTime();
+        if (!Number.isFinite(v)) { alert('اختار تاريخ صحيح.'); return; }
+        if (!contestNow().pending && !confirm('المسابقة شغالة. تغيير الموعد هيبوّظ ترقيم الأسابيع. متأكد؟')) return;
+        try { await setDoc(doc(db, 'settings', 'main'), { anchor: v }, { merge: true }); toast('تم حفظ الموعد ✅'); } catch (e) { fail(e); }
     });
 
     // ---------- الإعدادات ----------
